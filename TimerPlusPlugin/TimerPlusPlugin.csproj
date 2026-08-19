@@ -1,0 +1,75 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<RootNamespace>TimerPlusPlugin</RootNamespace>
+		<AssemblyName>TimerPlusPlugin</AssemblyName>
+		<Platforms>x64</Platforms>
+		<!-- 日本語のソースコードを含むため、コンパイル時の文字コード関連の警告を明示的に許可 -->
+		<NoWarn>CS8981</NoWarn>
+	</PropertyGroup>
+
+	<!--
+    YMM4本体のDLLはNuGetではなく、YMM4のインストールフォルダから直接HintPathで参照する。
+    $(YMM4DirPath) は Directory.Build.props (このリポジトリのルートに配置) で定義すること。
+    Directory.Build.props.sample を Directory.Build.props にコピーし、
+    YMM4DirPath に自分の環境のYMM4フォルダパスを設定してください。
+  -->
+	<ItemGroup>
+		<!--
+      本体アセンブリへの参照。TimerShapeParameter/TextItem/BasePoint/Style等、
+      YukkuriMovieMaker.Project.Items / YukkuriMovieMaker.Player.Video.Items 配下の型は
+      すべてこの本体アセンブリ(exe)に含まれている。これが無いと該当の名前空間ごと
+      見つからないエラー(CS0234)になる。
+    -->
+		<Reference Include="YukkuriMovieMaker">
+			<HintPath>$(YMM4DirPath)YukkuriMovieMaker.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="YukkuriMovieMaker.Controls">
+			<HintPath>$(YMM4DirPath)YukkuriMovieMaker.Controls.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="YukkuriMovieMaker.Plugin">
+			<HintPath>$(YMM4DirPath)YukkuriMovieMaker.Plugin.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+
+		<!-- Direct2D系。フォールバックのエラー表示描画(赤い矩形)に使用 -->
+		<Reference Include="SharpGen.Runtime">
+			<HintPath>$(YMM4DirPath)SharpGen.Runtime.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="SharpGen.Runtime.COM">
+			<HintPath>$(YMM4DirPath)SharpGen.Runtime.COM.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Vortice.Direct2D1">
+			<HintPath>$(YMM4DirPath)Vortice.Direct2D1.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Vortice.DirectX">
+			<HintPath>$(YMM4DirPath)Vortice.DirectX.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Vortice.Mathematics">
+			<HintPath>$(YMM4DirPath)Vortice.Mathematics.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+
+	<!-- ビルド後、YMM4のuser\pluginフォルダへ自動コピー -->
+	<Target Name="CopyToYMM4PluginFolder" AfterTargets="Build">
+		<ItemGroup>
+			<PluginOutputFiles Include="$(TargetDir)TimerPlusPlugin.dll" />
+		</ItemGroup>
+		<Copy SourceFiles="@(PluginOutputFiles)"
+			  DestinationFolder="$(YMM4DirPath)user\plugin\TimerPlusPlugin\"
+			  SkipUnchangedFiles="true" />
+	</Target>
+
+</Project>
