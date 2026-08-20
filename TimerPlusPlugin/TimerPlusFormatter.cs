@@ -27,13 +27,14 @@ public sealed record TimerPlusTextSegment(string Text, TimerPlusUnitKind Unit);
 /// <summary>1行分のテキスト片の並び。</summary>
 public sealed record TimerPlusTextLine(int LineNumber, IReadOnlyList<TimerPlusTextSegment> Segments);
 
-/// <summary>1つの単位（日/時/分/秒/小数秒）のフォーマット設定。すべての単位が常に個別扱いになる。</summary>
+/// <summary>1つの単位（日/時/分/秒/小数秒）のフォーマット設定。</summary>
 public sealed record TimerPlusUnitSettings(
     bool Enabled,
     int Digits,
     string Prefix,
     string Suffix,
-    int Line);
+    int Line,
+    bool CustomStyleEnabled);
 
 public sealed record TimerPlusCustomSettings(
     TimerPlusUnitSettings Day,
@@ -100,8 +101,10 @@ public static class TimerPlusFormatter
     }
 
     /// <summary>
-    /// カスタム書式。日/時/分/秒/小数秒はすべて常に個別のセグメントとして生成される
-    /// (「個別設定」トグルは廃止。全単位が最初から個別テキストとして扱われる)。
+    /// カスタム書式。日/時/分/秒/小数秒はすべて常に単位固有のセグメントとして生成される。
+    /// 「個別設定」のON/OFFはここでは判定しない(常にUnit固有の種別でセグメントを作る)。
+    /// ON/OFFの実際の効果(フォント/サイズ/色などを文字グループの設定から取るか、
+    /// この単位専用の設定から取るか)は、TimerPlusShapeSource.BuildDecoration側で行う。
     /// 各単位のテキストは処理順(日→時→分→秒→小数秒)のまま1件ずつ積んでから
     /// 行番号でグルーピングするだけなので、重複が起こる余地がない。
     /// </summary>
@@ -138,6 +141,13 @@ public static class TimerPlusFormatter
 
         var items = new List<(int line, TimerPlusUnitKind kind, string text)>();
 
+        // 個別設定(CustomStyleEnabled)のON/OFFに関わらず、各単位は常にそれぞれ独立した
+        // セグメントとして生成する。ON/OFFの違いは、TimerPlusShapeSource側でTextDecorationの
+        // 中身(フォント/サイズ/色など)を「文字グループの設定」から取るか「この単位の個別設定」
+        // から取るかだけの違いにする(ここでは分岐しない)。
+        // これにより、行のグルーピング処理は常に「各単位1件ずつ、必ずUnit固有の種別」という
+        // 単純な形になり、セグメントの内容が重複する余地がなくなる。
+
         if (s.Day.Enabled)
             items.Add((Math.Max(1, s.Day.Line), TimerPlusUnitKind.Day,
                 s.Day.Prefix + FormatNumber(dayValue, s.Day.Digits) + s.Day.Suffix));
@@ -159,7 +169,6 @@ public static class TimerPlusFormatter
                 s.Fraction.Prefix + FormatNumber(fracValue, s.Fraction.Digits) + s.Fraction.Suffix));
 
         // 行番号でグルーピング。同じ行内では元の処理順(日→時→分→秒→小数秒)を維持する(安定ソート)。
-        // 同じ行に複数の単位が乗る場合、それぞれが独立したセグメント(個別スタイル適用対象)のまま並ぶ。
         var byLine = items
             .Select((it, idx) => (it, idx))
             .OrderBy(x => x.it.line)

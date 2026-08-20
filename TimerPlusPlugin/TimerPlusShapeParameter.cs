@@ -94,13 +94,17 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     [Range(1, 10)]
     public int DayLine { get => field; set => Set(ref field, value); } = 1;
 
+    [Display(GroupName = "日", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
+    [ToggleSlider]
+    public bool DayCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+
     [Display(GroupName = "日/文字", Name = "フォント", Description = "日の数値部分のフォント")]
     [FontComboBox]
     public string DayFont { get => field; set => Set(ref field, value); } = "メイリオ";
 
-    [Display(GroupName = "日/文字", Name = "サイズ", Description = "日の数値部分の文字サイズ(px)", AutoGenerateField = true)]
-    [AnimationSlider("F0", "px", 1, 500)]
-    public Animation DayFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    [Display(GroupName = "日/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
+    [AnimationSlider("F0", "%", 1, 1000)]
+    public Animation DayFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
 
     [Display(GroupName = "日/文字", Name = "文字色", Description = "日の数値部分の文字色")]
     [ColorPicker]
@@ -158,13 +162,17 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     [Range(1, 10)]
     public int HourLine { get => field; set => Set(ref field, value); } = 1;
 
+    [Display(GroupName = "時", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
+    [ToggleSlider]
+    public bool HourCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+
     [Display(GroupName = "時/文字", Name = "フォント", Description = "時の数値部分のフォント")]
     [FontComboBox]
     public string HourFont { get => field; set => Set(ref field, value); } = "メイリオ";
 
-    [Display(GroupName = "時/文字", Name = "サイズ", Description = "時の数値部分の文字サイズ(px)", AutoGenerateField = true)]
-    [AnimationSlider("F0", "px", 1, 500)]
-    public Animation HourFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    [Display(GroupName = "時/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
+    [AnimationSlider("F0", "%", 1, 1000)]
+    public Animation HourFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
 
     [Display(GroupName = "時/文字", Name = "文字色", Description = "時の数値部分の文字色")]
     [ColorPicker]
@@ -222,13 +230,17 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     [Range(1, 10)]
     public int MinuteLine { get => field; set => Set(ref field, value); } = 1;
 
+    [Display(GroupName = "分", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
+    [ToggleSlider]
+    public bool MinuteCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+
     [Display(GroupName = "分/文字", Name = "フォント", Description = "分の数値部分のフォント")]
     [FontComboBox]
     public string MinuteFont { get => field; set => Set(ref field, value); } = "メイリオ";
 
-    [Display(GroupName = "分/文字", Name = "サイズ", Description = "分の数値部分の文字サイズ(px)", AutoGenerateField = true)]
-    [AnimationSlider("F0", "px", 1, 500)]
-    public Animation MinuteFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    [Display(GroupName = "分/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
+    [AnimationSlider("F0", "%", 1, 1000)]
+    public Animation MinuteFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
 
     [Display(GroupName = "分/文字", Name = "文字色", Description = "分の数値部分の文字色")]
     [ColorPicker]
@@ -286,13 +298,17 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     [Range(1, 10)]
     public int SecondLine { get => field; set => Set(ref field, value); } = 1;
 
+    [Display(GroupName = "秒", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
+    [ToggleSlider]
+    public bool SecondCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+
     [Display(GroupName = "秒/文字", Name = "フォント", Description = "秒の数値部分のフォント")]
     [FontComboBox]
     public string SecondFont { get => field; set => Set(ref field, value); } = "メイリオ";
 
-    [Display(GroupName = "秒/文字", Name = "サイズ", Description = "秒の数値部分の文字サイズ(px)", AutoGenerateField = true)]
-    [AnimationSlider("F0", "px", 1, 500)]
-    public Animation SecondFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    [Display(GroupName = "秒/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
+    [AnimationSlider("F0", "%", 1, 1000)]
+    public Animation SecondFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
 
     [Display(GroupName = "秒/文字", Name = "文字色", Description = "秒の数値部分の文字色")]
     [ColorPicker]
@@ -350,13 +366,17 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     [Range(1, 10)]
     public int FractionLine { get => field; set => Set(ref field, value); } = 1;
 
+    [Display(GroupName = "小数秒", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
+    [ToggleSlider]
+    public bool FractionCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+
     [Display(GroupName = "小数秒/文字", Name = "フォント", Description = "小数秒の数値部分のフォント")]
     [FontComboBox]
     public string FractionFont { get => field; set => Set(ref field, value); } = "メイリオ";
 
-    [Display(GroupName = "小数秒/文字", Name = "サイズ", Description = "小数秒の数値部分の文字サイズ(px)", AutoGenerateField = true)]
-    [AnimationSlider("F0", "px", 1, 500)]
-    public Animation FractionFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    [Display(GroupName = "小数秒/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
+    [AnimationSlider("F0", "%", 1, 1000)]
+    public Animation FractionFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
 
     [Display(GroupName = "小数秒/文字", Name = "文字色", Description = "小数秒の数値部分の文字色")]
     [ColorPicker]
@@ -451,11 +471,11 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         => [InitialValueOffset, PlaybackRate, FontSize, LetterSpacing2, DayFontSize, HourFontSize, MinuteFontSize, SecondFontSize, FractionFontSize];
 
     internal TimerPlusCustomSettings CreateCustomSettings() => new(
-        new TimerPlusUnitSettings(DayEnabled, DayDigits, DayPrefix, DaySuffix, DayLine),
-        new TimerPlusUnitSettings(HourEnabled, HourDigits, HourPrefix, HourSuffix, HourLine),
-        new TimerPlusUnitSettings(MinuteEnabled, MinuteDigits, MinutePrefix, MinuteSuffix, MinuteLine),
-        new TimerPlusUnitSettings(SecondEnabled, SecondDigits, SecondPrefix, SecondSuffix, SecondLine),
-        new TimerPlusUnitSettings(FractionEnabled, FractionDigits, FractionPrefix, FractionSuffix, FractionLine));
+        new TimerPlusUnitSettings(DayEnabled, DayDigits, DayPrefix, DaySuffix, DayLine, DayCustomStyleEnabled),
+        new TimerPlusUnitSettings(HourEnabled, HourDigits, HourPrefix, HourSuffix, HourLine, HourCustomStyleEnabled),
+        new TimerPlusUnitSettings(MinuteEnabled, MinuteDigits, MinutePrefix, MinuteSuffix, MinuteLine, MinuteCustomStyleEnabled),
+        new TimerPlusUnitSettings(SecondEnabled, SecondDigits, SecondPrefix, SecondSuffix, SecondLine, SecondCustomStyleEnabled),
+        new TimerPlusUnitSettings(FractionEnabled, FractionDigits, FractionPrefix, FractionSuffix, FractionLine, FractionCustomStyleEnabled));
 
     protected override void LoadSharedData(SharedDataStore sharedData)
     {
@@ -498,6 +518,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         DayPrefix = data.DayPrefix;
         DaySuffix = data.DaySuffix;
         DayLine = data.DayLine;
+        DayCustomStyleEnabled = data.DayCustomStyleEnabled;
         DayFont = data.DayFont;
         DayFontSize.CopyFrom(data.DayFontSize);
         DayFontColor = data.DayFontColor;
@@ -514,6 +535,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         HourPrefix = data.HourPrefix;
         HourSuffix = data.HourSuffix;
         HourLine = data.HourLine;
+        HourCustomStyleEnabled = data.HourCustomStyleEnabled;
         HourFont = data.HourFont;
         HourFontSize.CopyFrom(data.HourFontSize);
         HourFontColor = data.HourFontColor;
@@ -530,6 +552,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         MinutePrefix = data.MinutePrefix;
         MinuteSuffix = data.MinuteSuffix;
         MinuteLine = data.MinuteLine;
+        MinuteCustomStyleEnabled = data.MinuteCustomStyleEnabled;
         MinuteFont = data.MinuteFont;
         MinuteFontSize.CopyFrom(data.MinuteFontSize);
         MinuteFontColor = data.MinuteFontColor;
@@ -546,6 +569,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         SecondPrefix = data.SecondPrefix;
         SecondSuffix = data.SecondSuffix;
         SecondLine = data.SecondLine;
+        SecondCustomStyleEnabled = data.SecondCustomStyleEnabled;
         SecondFont = data.SecondFont;
         SecondFontSize.CopyFrom(data.SecondFontSize);
         SecondFontColor = data.SecondFontColor;
@@ -562,6 +586,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         FractionPrefix = data.FractionPrefix;
         FractionSuffix = data.FractionSuffix;
         FractionLine = data.FractionLine;
+        FractionCustomStyleEnabled = data.FractionCustomStyleEnabled;
         FractionFont = data.FractionFont;
         FractionFontSize.CopyFrom(data.FractionFontSize);
         FractionFontColor = data.FractionFontColor;

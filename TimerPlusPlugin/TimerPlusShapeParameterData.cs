@@ -22,6 +22,7 @@ public class TimerPlusShapeParameterData
     public string DayPrefix { get; set; } = "";
     public string DaySuffix { get; set; } = "";
     public int DayLine { get; set; }
+    public bool DayCustomStyleEnabled { get; set; }
     public string DayFont { get; set; } = "";
     public Animation DayFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
     public Color DayFontColor { get; set; }
@@ -38,6 +39,7 @@ public class TimerPlusShapeParameterData
     public string HourPrefix { get; set; } = "";
     public string HourSuffix { get; set; } = "";
     public int HourLine { get; set; }
+    public bool HourCustomStyleEnabled { get; set; }
     public string HourFont { get; set; } = "";
     public Animation HourFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
     public Color HourFontColor { get; set; }
@@ -54,6 +56,7 @@ public class TimerPlusShapeParameterData
     public string MinutePrefix { get; set; } = "";
     public string MinuteSuffix { get; set; } = "";
     public int MinuteLine { get; set; }
+    public bool MinuteCustomStyleEnabled { get; set; }
     public string MinuteFont { get; set; } = "";
     public Animation MinuteFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
     public Color MinuteFontColor { get; set; }
@@ -70,6 +73,7 @@ public class TimerPlusShapeParameterData
     public string SecondPrefix { get; set; } = "";
     public string SecondSuffix { get; set; } = "";
     public int SecondLine { get; set; }
+    public bool SecondCustomStyleEnabled { get; set; }
     public string SecondFont { get; set; } = "";
     public Animation SecondFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
     public Color SecondFontColor { get; set; }
@@ -86,6 +90,7 @@ public class TimerPlusShapeParameterData
     public string FractionPrefix { get; set; } = "";
     public string FractionSuffix { get; set; } = "";
     public int FractionLine { get; set; }
+    public bool FractionCustomStyleEnabled { get; set; }
     public string FractionFont { get; set; } = "";
     public Animation FractionFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
     public Color FractionFontColor { get; set; }
@@ -143,6 +148,7 @@ public class TimerPlusShapeParameterData
         DayPrefix = parameter.DayPrefix;
         DaySuffix = parameter.DaySuffix;
         DayLine = parameter.DayLine;
+        DayCustomStyleEnabled = parameter.DayCustomStyleEnabled;
         DayFont = parameter.DayFont;
         DayFontSize.CopyFrom(parameter.DayFontSize);
         DayFontColor = parameter.DayFontColor;
@@ -159,6 +165,7 @@ public class TimerPlusShapeParameterData
         HourPrefix = parameter.HourPrefix;
         HourSuffix = parameter.HourSuffix;
         HourLine = parameter.HourLine;
+        HourCustomStyleEnabled = parameter.HourCustomStyleEnabled;
         HourFont = parameter.HourFont;
         HourFontSize.CopyFrom(parameter.HourFontSize);
         HourFontColor = parameter.HourFontColor;
@@ -175,6 +182,7 @@ public class TimerPlusShapeParameterData
         MinutePrefix = parameter.MinutePrefix;
         MinuteSuffix = parameter.MinuteSuffix;
         MinuteLine = parameter.MinuteLine;
+        MinuteCustomStyleEnabled = parameter.MinuteCustomStyleEnabled;
         MinuteFont = parameter.MinuteFont;
         MinuteFontSize.CopyFrom(parameter.MinuteFontSize);
         MinuteFontColor = parameter.MinuteFontColor;
@@ -191,6 +199,7 @@ public class TimerPlusShapeParameterData
         SecondPrefix = parameter.SecondPrefix;
         SecondSuffix = parameter.SecondSuffix;
         SecondLine = parameter.SecondLine;
+        SecondCustomStyleEnabled = parameter.SecondCustomStyleEnabled;
         SecondFont = parameter.SecondFont;
         SecondFontSize.CopyFrom(parameter.SecondFontSize);
         SecondFontColor = parameter.SecondFontColor;
@@ -207,6 +216,7 @@ public class TimerPlusShapeParameterData
         FractionPrefix = parameter.FractionPrefix;
         FractionSuffix = parameter.FractionSuffix;
         FractionLine = parameter.FractionLine;
+        FractionCustomStyleEnabled = parameter.FractionCustomStyleEnabled;
         FractionFont = parameter.FractionFont;
         FractionFontSize.CopyFrom(parameter.FractionFontSize);
         FractionFontColor = parameter.FractionFontColor;
