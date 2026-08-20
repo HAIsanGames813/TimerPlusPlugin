@@ -40,27 +40,15 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     [EnumComboBox]
     public TimerPlusCountDirection Direction { get => field; set => Set(ref field, value); } = TimerPlusCountDirection.CountUp;
 
-    [Display(GroupName = "モード", Name = "動作反転", Description = "OFF: カウントアップは初期値が開始値、カウントダウンは初期値が終了値。ON: この対応関係を入れ替えます")]
+    [Display(GroupName = "モード", Name = "初期値反転", Description = "OFF: カウントダウンは初期値が終了値(初期値+長さから減少)、カウントアップは初期値が開始値(初期値から増加)。ON: この対応を入れ替えます(カウントアップは初期値が終了値、カウントダウンは初期値が開始値)")]
     [ToggleSlider]
-    public bool ReverseBehavior { get => field; set => Set(ref field, value); } = false;
+    public bool IsInitialValueReversed { get => field; set => Set(ref field, value); } = false;
 
     [Display(GroupName = "タイマー", Name = "初期時間", Description = "カウントの基準となる時間(00:00:00.00形式)")]
     [TimeSpanTextEditor]
     [TimeSpanDefaultValue]
     [TimeSpanRange]
     public TimeSpan InitialTime { get => field; set => Set(ref field, value); } = TimeSpan.Zero;
-
-    [Display(GroupName = "タイマー", Name = "初期値:フレーム", Description = "カウントの基準となる時間(フレームの部分。タイムラインのFPS基準で秒に変換されます)")]
-    [TextBoxSlider("F0", "", 0, 999999)]
-    [DefaultValue(0)]
-    [Range(0, 999999)]
-    public int InitialValueBaseFrames { get => field; set => Set(ref field, value); } = 0;
-
-    internal double GetInitialValueBaseSeconds(int fps)
-    {
-        double frameSeconds = fps > 0 ? (double)InitialValueBaseFrames / fps : 0.0;
-        return InitialTime.TotalSeconds + frameSeconds;
-    }
 
     [Display(GroupName = "タイマー", Name = "初期値オフセット", Description = "初期値に加算される、イージング対応のオフセット(秒)", AutoGenerateField = true)]
     [AnimationSlider("F2", "秒", -60, 60)]
@@ -508,10 +496,9 @@ public class TimerPlusShapeParameter : ShapeParameterBase
 
         Format = data.Format;
         Direction = data.Direction;
-        ReverseBehavior = data.ReverseBehavior;
+        IsInitialValueReversed = data.IsInitialValueReversed;
 
         InitialTime = data.InitialTime;
-        InitialValueBaseFrames = data.InitialValueBaseFrames;
 
         DayEnabled = data.DayEnabled;
         DayDigits = data.DayDigits;

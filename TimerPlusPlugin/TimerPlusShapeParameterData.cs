@@ -9,10 +9,9 @@ public class TimerPlusShapeParameterData
 {
     public TimerPlusFormat Format { get; set; }
     public TimerPlusCountDirection Direction { get; set; }
-    public bool ReverseBehavior { get; set; }
+    public bool IsInitialValueReversed { get; set; }
 
     public TimeSpan InitialTime { get; set; }
-    public int InitialValueBaseFrames { get; set; }
 
     public Animation InitialValueOffset { get; } = new Animation(0.0, -2147483648.0, 2147483647.0);
     public Animation PlaybackRate { get; } = new Animation(100.0, -100000.0, 100000.0);
@@ -138,10 +137,9 @@ public class TimerPlusShapeParameterData
 
         Format = parameter.Format;
         Direction = parameter.Direction;
-        ReverseBehavior = parameter.ReverseBehavior;
+        IsInitialValueReversed = parameter.IsInitialValueReversed;
 
         InitialTime = parameter.InitialTime;
-        InitialValueBaseFrames = parameter.InitialValueBaseFrames;
 
         DayEnabled = parameter.DayEnabled;
         DayDigits = parameter.DayDigits;

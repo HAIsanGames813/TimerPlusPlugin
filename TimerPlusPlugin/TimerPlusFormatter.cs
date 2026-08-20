@@ -5,9 +5,7 @@ using System.Linq;
 
 namespace TimerPlusPlugin;
 
-/// <summary>
-/// どの単位の値によって作られたテキスト片かを表す。
-/// </summary>
+/// <summary>どの単位の値によって作られたテキスト片かを表す。</summary>
 public enum TimerPlusUnitKind
 {
     Default,
@@ -18,10 +16,7 @@ public enum TimerPlusUnitKind
     Fraction,
 }
 
-/// <summary>
-/// 1つのテキスト片。日/時/分/秒/小数秒はすべて常に個別のセグメントとして扱われる
-/// (個別のTextDecorationとして描画側でスタイルを適用できる)。
-/// </summary>
+/// <summary>1つのテキスト片。日/時/分/秒/小数秒は常に個別セグメントとして扱われる。</summary>
 public sealed record TimerPlusTextSegment(string Text, TimerPlusUnitKind Unit);
 
 /// <summary>1行分のテキスト片の並び。</summary>
@@ -50,10 +45,7 @@ public static class TimerPlusFormatter
     private const long SecPerMinute = 60;
     private const long SecPerSecond = 1;
 
-    /// <summary>
-    /// カウンター時間を表示用の行・テキスト片リストに変換する。
-    /// 「カスタム」以外の書式は1行1セグメント（既定スタイル）を返す。
-    /// </summary>
+    /// <summary>カウンター時間を行・テキスト片リストに変換する。「カスタム」以外は1行1セグメント。</summary>
     public static IReadOnlyList<TimerPlusTextLine> FormatLines(TimeSpan counterTime, TimerPlusFormat format, TimerPlusCustomSettings custom)
     {
         bool negative = counterTime.Ticks < 0;
@@ -100,14 +92,7 @@ public static class TimerPlusFormatter
         return newLines;
     }
 
-    /// <summary>
-    /// カスタム書式。日/時/分/秒/小数秒はすべて常に単位固有のセグメントとして生成される。
-    /// 「個別設定」のON/OFFはここでは判定しない(常にUnit固有の種別でセグメントを作る)。
-    /// ON/OFFの実際の効果(フォント/サイズ/色などを文字グループの設定から取るか、
-    /// この単位専用の設定から取るか)は、TimerPlusShapeSource.BuildDecoration側で行う。
-    /// 各単位のテキストは処理順(日→時→分→秒→小数秒)のまま1件ずつ積んでから
-    /// 行番号でグルーピングするだけなので、重複が起こる余地がない。
-    /// </summary>
+    /// <summary>カスタム書式。各単位は常に独立したセグメントとして生成し、行番号でグルーピングする。</summary>
     private static IReadOnlyList<TimerPlusTextLine> FormatCustomLines(TimeSpan t, TimerPlusCustomSettings s)
     {
         double totalSecondsAbs = t.TotalSeconds;
@@ -141,12 +126,7 @@ public static class TimerPlusFormatter
 
         var items = new List<(int line, TimerPlusUnitKind kind, string text)>();
 
-        // 個別設定(CustomStyleEnabled)のON/OFFに関わらず、各単位は常にそれぞれ独立した
-        // セグメントとして生成する。ON/OFFの違いは、TimerPlusShapeSource側でTextDecorationの
-        // 中身(フォント/サイズ/色など)を「文字グループの設定」から取るか「この単位の個別設定」
-        // から取るかだけの違いにする(ここでは分岐しない)。
-        // これにより、行のグルーピング処理は常に「各単位1件ずつ、必ずUnit固有の種別」という
-        // 単純な形になり、セグメントの内容が重複する余地がなくなる。
+        // 各単位は常に独立したセグメントとして生成する(スタイルの出所はShapeSource側で分岐)
 
         if (s.Day.Enabled)
             items.Add((Math.Max(1, s.Day.Line), TimerPlusUnitKind.Day,
@@ -168,7 +148,7 @@ public static class TimerPlusFormatter
             items.Add((Math.Max(1, s.Fraction.Line), TimerPlusUnitKind.Fraction,
                 s.Fraction.Prefix + FormatNumber(fracValue, s.Fraction.Digits) + s.Fraction.Suffix));
 
-        // 行番号でグルーピング。同じ行内では元の処理順(日→時→分→秒→小数秒)を維持する(安定ソート)。
+        // 行番号でグルーピング(同じ行内は処理順を維持)
         var byLine = items
             .Select((it, idx) => (it, idx))
             .OrderBy(x => x.it.line)

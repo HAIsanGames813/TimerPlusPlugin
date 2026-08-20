@@ -16,20 +16,7 @@ using WpfColor = System.Windows.Media.Color;
 namespace TimerPlusPlugin;
 
 /// <summary>
-/// タイマー+の実描画クラス。
-///
-/// 【設計変更の経緯】当初は1つの TextItem.Text に全行を改行文字("\r\n"→のちに"\n")で
-/// 連結し、各単位の TextDecoration の Start/Length をその連結後の文字列内の位置として
-/// 計算する方式にしていた。しかし実機検証で「表示行が増えるほど、下の行ほど内容が
-/// 断片化・重複する(後ろからn文字ずつ増える)」という不具合が確認された。
-/// 改行の実際の内部表現(1文字か2文字か、あるいは全く別の仕組みか)を外部から
-/// 正確に推測するのが難しく、修正を重ねても再発したため、根本的に方式を変えた。
-///
-/// 現在は「1行につき1組の TextItem/TextSource を用意し、改行文字を一切使わずに
-/// 各行を完全に独立してレンダリングし、その結果(画像)をこちら側で縦に並べて合成する」
-/// という方式にしている。これにより、各行内の TextDecoration の Start/Length は
-/// その行単体の文字列だけを基準にすればよくなり、行をまたぐインデックス計算が
-/// 一切不要になった(このバグのクラス自体が原理的に発生しなくなる)。
+/// タイマー+の実描画クラス。行ごとに独立した TextItem/TextSource でレンダリングし、縦に合成する。
 /// </summary>
 internal class TimerPlusShapeSource : IShapeSource
 {
@@ -79,8 +66,7 @@ internal class TimerPlusShapeSource : IShapeSource
         TimeSpan counterTime = ComputeCounterTime(frame, length, fps, duration);
         var lines = TimerPlusFormatter.FormatLines(counterTime, parameter.Format, parameter.CreateCustomSettings());
 
-        // 行ごとに、その行単体のテキストとDecorationsを作る。
-        // (改行文字を一切使わないので、行をまたぐインデックスのズレが発生しようがない)
+        // 行ごとにテキストとDecorationsを構築
         var lineData = new List<(string text, ImmutableList<TextDecoration> decorations)>();
         foreach (var line in lines)
         {
@@ -102,9 +88,7 @@ internal class TimerPlusShapeSource : IShapeSource
             lineData.Add((sb.Length == 0 ? " " : sb.ToString(), decorations.ToImmutableList()));
         }
 
-        // 変化検知: 厳密な差分検知ではなく、行ごとのテキスト・Decorations・
-        // 文字グループの主要プロパティを連結した簡易キーで「何か変わったら丸ごと作り直す」
-        // という単純な方式にしている(細かいプロパティ単位の比較は複雑になりバグの温床になりやすいため)。
+        // 変化検知用のキャッシュキー(何か変わったら丸ごと作り直す)
         var keyBuilder = new StringBuilder();
         keyBuilder.Append(parameter.Font).Append('|');
         keyBuilder.Append(parameter.FontSize.GetValue(frame, length, fps)).Append('|');
@@ -137,7 +121,7 @@ internal class TimerPlusShapeSource : IShapeSource
 
     private void RenderComposite(List<(string text, ImmutableList<TextDecoration> decorations)> lineData, TimelineItemSourceDescription desc, int frame, int length, int fps)
     {
-        // 行数分の LineRenderer を確保する(足りなければ作成、余っていれば破棄)
+        // 行数分の LineRenderer を確保(過不足を作成/破棄)
         while (lineRenderers.Count < lineData.Count)
             lineRenderers.Add(new LineRenderer(devices));
         while (lineRenderers.Count > lineData.Count)
@@ -148,9 +132,7 @@ internal class TimerPlusShapeSource : IShapeSource
 
         var dc = devices.DeviceContext;
 
-        // 各行を更新し、行ごとの画像とサイズを取得する。
-        // 行内は常に左上基準(LeftTop)で組み立て、全体としての配置(BasePoint)は
-        // こちら側で解釈して合成時に位置調整する。
+        // 各行を左上基準で更新し、画像とサイズを取得(全体の配置はBasePointで後調整)
         var lineImages = new List<(ID2D1Image image, float width, float height)>();
         for (int i = 0; i < lineData.Count; i++)
         {
@@ -233,10 +215,7 @@ internal class TimerPlusShapeSource : IShapeSource
         Output = newCommandList;
     }
 
-    /// <summary>
-    /// BasePoint(18方位。縦書き用のVはこちらでは横書き相当として近似)から
-    /// 水平方向(0=左,1=中央,2=右)・垂直方向(0=上,1=中央,2=下)の揃えを取り出す。
-    /// </summary>
+    /// <summary>BasePointから水平/垂直の揃えを取り出す。</summary>
     private static (int horizontal, int vertical) GetAlignment(YukkuriMovieMaker.Project.Items.BasePoint basePoint)
     {
         int h = basePoint switch
@@ -281,19 +260,7 @@ internal class TimerPlusShapeSource : IShapeSource
         return (x, y);
     }
 
-    /// <summary>
-    /// 各単位(日/時/分/秒/小数秒)について、その行内の文字範囲(Start/Length、
-    /// その行単体のテキストを基準とする)に対するTextDecorationを常に作る。
-    /// 「個別設定(CustomStyleEnabled)」がONの単位はその単位専用の設定値を、
-    /// OFFの単位は文字グループ(既定)の設定値を、それぞれTextDecorationに詰める。
-    ///
-    /// 【サイズについて】個別設定の「サイズ」は文字グループのサイズに対する割合(%)として扱う
-    /// (既定値100 = グループと同じサイズ)。OFFの場合はグループのサイズをそのまま使うので
-    /// Scale=1.0(等倍)になる。
-    /// また「文字ごとに分割」はTextItem全体に対する設定であり、TextDecoration側には
-    /// 対応するプロパティが無いため、単位ごとの個別指定はできない
-    /// (グループの「文字ごとに分割」設定がアイテム全体に適用される)。
-    /// </summary>
+    /// <summary>各単位の文字範囲に対するTextDecorationを作る(個別設定ONならその単位専用の値、OFFなら文字グループの値)。</summary>
     private TextDecoration? BuildDecoration(TimerPlusUnitKind unit, int start, int length, int frame, int lengthFrames, int fps)
     {
         string font;
@@ -398,22 +365,20 @@ internal class TimerPlusShapeSource : IShapeSource
     private TimeSpan ComputeCounterTime(int frame, int length, int fps, TimeSpan duration)
     {
         double offset = parameter.InitialValueOffset.GetValue(frame, length, fps);
-        double initialValue = parameter.GetInitialValueBaseSeconds(fps) + offset;
+        double initialValue = parameter.InitialTime.TotalSeconds + offset;
 
         double cumulativeRateSeconds = GetCumulativeRateSeconds(frame, length, fps);
 
         bool isCountDown = parameter.Direction == TimerPlusCountDirection.CountDown;
-        bool reverse = parameter.ReverseBehavior;
+        bool reversed = parameter.IsInitialValueReversed;
 
-        bool initialIsEnd = isCountDown != reverse;
-
+        // 通常: カウントダウンは初期値が終了値、カウントアップは初期値が開始値。反転時は入れ替わる。
+        bool initialIsEnd = isCountDown != reversed;
         if (initialIsEnd)
-        {
-            initialValue += duration.TotalSeconds;
-            cumulativeRateSeconds *= -1.0;
-        }
+            initialValue += isCountDown ? duration.TotalSeconds : -duration.TotalSeconds;
 
-        double seconds = initialValue + cumulativeRateSeconds;
+        // 増減の向き自体はDirectionのみで決まる(カウントダウンは常に減少、カウントアップは常に増加)。
+        double seconds = initialValue + (isCountDown ? -cumulativeRateSeconds : cumulativeRateSeconds);
         return TimeSpan.FromTicks((long)Math.Round(seconds * TimeSpan.TicksPerSecond, MidpointRounding.AwayFromZero));
     }
 
