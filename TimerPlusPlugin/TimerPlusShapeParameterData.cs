@@ -21,15 +21,19 @@ public class TimerPlusShapeParameterData
     public string DayPrefix { get; set; } = "";
     public string DaySuffix { get; set; } = "";
     public int DayLine { get; set; }
+    public bool DayFixedDigits { get; set; }
     public bool DayCustomStyleEnabled { get; set; }
     public string DayFont { get; set; } = "";
-    public Animation DayFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    public Animation DayFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
+    public Animation DayOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation DayOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation DayRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation DayLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Color DayFontColor { get; set; }
     public bool DayBold { get; set; }
     public bool DayItalic { get; set; }
     public bool DayUnderline { get; set; }
     public bool DayStrikeThrough { get; set; }
-    public bool DaySplitByCharacter { get; set; }
     public YukkuriMovieMaker.Project.Items.Style DayStyle { get; set; }
     public Color DayStyleColor { get; set; }
 
@@ -38,15 +42,19 @@ public class TimerPlusShapeParameterData
     public string HourPrefix { get; set; } = "";
     public string HourSuffix { get; set; } = "";
     public int HourLine { get; set; }
+    public bool HourFixedDigits { get; set; }
     public bool HourCustomStyleEnabled { get; set; }
     public string HourFont { get; set; } = "";
-    public Animation HourFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    public Animation HourFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
+    public Animation HourOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation HourOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation HourRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation HourLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Color HourFontColor { get; set; }
     public bool HourBold { get; set; }
     public bool HourItalic { get; set; }
     public bool HourUnderline { get; set; }
     public bool HourStrikeThrough { get; set; }
-    public bool HourSplitByCharacter { get; set; }
     public YukkuriMovieMaker.Project.Items.Style HourStyle { get; set; }
     public Color HourStyleColor { get; set; }
 
@@ -55,15 +63,19 @@ public class TimerPlusShapeParameterData
     public string MinutePrefix { get; set; } = "";
     public string MinuteSuffix { get; set; } = "";
     public int MinuteLine { get; set; }
+    public bool MinuteFixedDigits { get; set; }
     public bool MinuteCustomStyleEnabled { get; set; }
     public string MinuteFont { get; set; } = "";
-    public Animation MinuteFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    public Animation MinuteFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
+    public Animation MinuteOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation MinuteOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation MinuteRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation MinuteLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Color MinuteFontColor { get; set; }
     public bool MinuteBold { get; set; }
     public bool MinuteItalic { get; set; }
     public bool MinuteUnderline { get; set; }
     public bool MinuteStrikeThrough { get; set; }
-    public bool MinuteSplitByCharacter { get; set; }
     public YukkuriMovieMaker.Project.Items.Style MinuteStyle { get; set; }
     public Color MinuteStyleColor { get; set; }
 
@@ -72,15 +84,19 @@ public class TimerPlusShapeParameterData
     public string SecondPrefix { get; set; } = "";
     public string SecondSuffix { get; set; } = "";
     public int SecondLine { get; set; }
+    public bool SecondFixedDigits { get; set; }
     public bool SecondCustomStyleEnabled { get; set; }
     public string SecondFont { get; set; } = "";
-    public Animation SecondFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    public Animation SecondFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
+    public Animation SecondOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation SecondOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation SecondRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation SecondLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Color SecondFontColor { get; set; }
     public bool SecondBold { get; set; }
     public bool SecondItalic { get; set; }
     public bool SecondUnderline { get; set; }
     public bool SecondStrikeThrough { get; set; }
-    public bool SecondSplitByCharacter { get; set; }
     public YukkuriMovieMaker.Project.Items.Style SecondStyle { get; set; }
     public Color SecondStyleColor { get; set; }
 
@@ -89,20 +105,24 @@ public class TimerPlusShapeParameterData
     public string FractionPrefix { get; set; } = "";
     public string FractionSuffix { get; set; } = "";
     public int FractionLine { get; set; }
+    public bool FractionFixedDigits { get; set; }
     public bool FractionCustomStyleEnabled { get; set; }
     public string FractionFont { get; set; } = "";
-    public Animation FractionFontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    public Animation FractionFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
+    public Animation FractionOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation FractionOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation FractionRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation FractionLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Color FractionFontColor { get; set; }
     public bool FractionBold { get; set; }
     public bool FractionItalic { get; set; }
     public bool FractionUnderline { get; set; }
     public bool FractionStrikeThrough { get; set; }
-    public bool FractionSplitByCharacter { get; set; }
     public YukkuriMovieMaker.Project.Items.Style FractionStyle { get; set; }
     public Color FractionStyleColor { get; set; }
 
     public string Font { get; set; } = "";
-    public Animation FontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    public Animation FontSize { get; } = new Animation(100.0, 1.0, 100000.0);
     public Animation LetterSpacing2 { get; } = new Animation(0.0, -100000.0, 100000.0);
     public BasePoint BasePoint { get; set; }
     public Color FontColor { get; set; }
@@ -112,7 +132,6 @@ public class TimerPlusShapeParameterData
     public bool Italic { get; set; }
     public bool Underline { get; set; }
     public bool StrikeThrough { get; set; }
-    public bool SplitByCharacter { get; set; }
 
     public TimerPlusShapeParameterData()
     {
@@ -132,7 +151,6 @@ public class TimerPlusShapeParameterData
         Italic = parameter.Italic;
         Underline = parameter.Underline;
         StrikeThrough = parameter.StrikeThrough;
-        SplitByCharacter = parameter.SplitByCharacter;
         BasePoint = parameter.BasePoint;
 
         Format = parameter.Format;
@@ -146,15 +164,19 @@ public class TimerPlusShapeParameterData
         DayPrefix = parameter.DayPrefix;
         DaySuffix = parameter.DaySuffix;
         DayLine = parameter.DayLine;
+        DayFixedDigits = parameter.DayFixedDigits;
         DayCustomStyleEnabled = parameter.DayCustomStyleEnabled;
         DayFont = parameter.DayFont;
         DayFontSize.CopyFrom(parameter.DayFontSize);
+        DayOffsetX.CopyFrom(parameter.DayOffsetX);
+        DayOffsetY.CopyFrom(parameter.DayOffsetY);
+        DayRotationAngle.CopyFrom(parameter.DayRotationAngle);
+        DayLetterSpacing.CopyFrom(parameter.DayLetterSpacing);
         DayFontColor = parameter.DayFontColor;
         DayBold = parameter.DayBold;
         DayItalic = parameter.DayItalic;
         DayUnderline = parameter.DayUnderline;
         DayStrikeThrough = parameter.DayStrikeThrough;
-        DaySplitByCharacter = parameter.DaySplitByCharacter;
         DayStyle = parameter.DayStyle;
         DayStyleColor = parameter.DayStyleColor;
 
@@ -163,15 +185,19 @@ public class TimerPlusShapeParameterData
         HourPrefix = parameter.HourPrefix;
         HourSuffix = parameter.HourSuffix;
         HourLine = parameter.HourLine;
+        HourFixedDigits = parameter.HourFixedDigits;
         HourCustomStyleEnabled = parameter.HourCustomStyleEnabled;
         HourFont = parameter.HourFont;
         HourFontSize.CopyFrom(parameter.HourFontSize);
+        HourOffsetX.CopyFrom(parameter.HourOffsetX);
+        HourOffsetY.CopyFrom(parameter.HourOffsetY);
+        HourRotationAngle.CopyFrom(parameter.HourRotationAngle);
+        HourLetterSpacing.CopyFrom(parameter.HourLetterSpacing);
         HourFontColor = parameter.HourFontColor;
         HourBold = parameter.HourBold;
         HourItalic = parameter.HourItalic;
         HourUnderline = parameter.HourUnderline;
         HourStrikeThrough = parameter.HourStrikeThrough;
-        HourSplitByCharacter = parameter.HourSplitByCharacter;
         HourStyle = parameter.HourStyle;
         HourStyleColor = parameter.HourStyleColor;
 
@@ -180,15 +206,19 @@ public class TimerPlusShapeParameterData
         MinutePrefix = parameter.MinutePrefix;
         MinuteSuffix = parameter.MinuteSuffix;
         MinuteLine = parameter.MinuteLine;
+        MinuteFixedDigits = parameter.MinuteFixedDigits;
         MinuteCustomStyleEnabled = parameter.MinuteCustomStyleEnabled;
         MinuteFont = parameter.MinuteFont;
         MinuteFontSize.CopyFrom(parameter.MinuteFontSize);
+        MinuteOffsetX.CopyFrom(parameter.MinuteOffsetX);
+        MinuteOffsetY.CopyFrom(parameter.MinuteOffsetY);
+        MinuteRotationAngle.CopyFrom(parameter.MinuteRotationAngle);
+        MinuteLetterSpacing.CopyFrom(parameter.MinuteLetterSpacing);
         MinuteFontColor = parameter.MinuteFontColor;
         MinuteBold = parameter.MinuteBold;
         MinuteItalic = parameter.MinuteItalic;
         MinuteUnderline = parameter.MinuteUnderline;
         MinuteStrikeThrough = parameter.MinuteStrikeThrough;
-        MinuteSplitByCharacter = parameter.MinuteSplitByCharacter;
         MinuteStyle = parameter.MinuteStyle;
         MinuteStyleColor = parameter.MinuteStyleColor;
 
@@ -197,15 +227,19 @@ public class TimerPlusShapeParameterData
         SecondPrefix = parameter.SecondPrefix;
         SecondSuffix = parameter.SecondSuffix;
         SecondLine = parameter.SecondLine;
+        SecondFixedDigits = parameter.SecondFixedDigits;
         SecondCustomStyleEnabled = parameter.SecondCustomStyleEnabled;
         SecondFont = parameter.SecondFont;
         SecondFontSize.CopyFrom(parameter.SecondFontSize);
+        SecondOffsetX.CopyFrom(parameter.SecondOffsetX);
+        SecondOffsetY.CopyFrom(parameter.SecondOffsetY);
+        SecondRotationAngle.CopyFrom(parameter.SecondRotationAngle);
+        SecondLetterSpacing.CopyFrom(parameter.SecondLetterSpacing);
         SecondFontColor = parameter.SecondFontColor;
         SecondBold = parameter.SecondBold;
         SecondItalic = parameter.SecondItalic;
         SecondUnderline = parameter.SecondUnderline;
         SecondStrikeThrough = parameter.SecondStrikeThrough;
-        SecondSplitByCharacter = parameter.SecondSplitByCharacter;
         SecondStyle = parameter.SecondStyle;
         SecondStyleColor = parameter.SecondStyleColor;
 
@@ -214,15 +248,19 @@ public class TimerPlusShapeParameterData
         FractionPrefix = parameter.FractionPrefix;
         FractionSuffix = parameter.FractionSuffix;
         FractionLine = parameter.FractionLine;
+        FractionFixedDigits = parameter.FractionFixedDigits;
         FractionCustomStyleEnabled = parameter.FractionCustomStyleEnabled;
         FractionFont = parameter.FractionFont;
         FractionFontSize.CopyFrom(parameter.FractionFontSize);
+        FractionOffsetX.CopyFrom(parameter.FractionOffsetX);
+        FractionOffsetY.CopyFrom(parameter.FractionOffsetY);
+        FractionRotationAngle.CopyFrom(parameter.FractionRotationAngle);
+        FractionLetterSpacing.CopyFrom(parameter.FractionLetterSpacing);
         FractionFontColor = parameter.FractionFontColor;
         FractionBold = parameter.FractionBold;
         FractionItalic = parameter.FractionItalic;
         FractionUnderline = parameter.FractionUnderline;
         FractionStrikeThrough = parameter.FractionStrikeThrough;
-        FractionSplitByCharacter = parameter.FractionSplitByCharacter;
         FractionStyle = parameter.FractionStyle;
         FractionStyleColor = parameter.FractionStyleColor;
     }

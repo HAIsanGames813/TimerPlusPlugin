@@ -4,7 +4,7 @@ using YukkuriMovieMaker.Project;
 
 namespace TimerPlusPlugin;
 
-[PluginDetails(AuthorName = "YourName", ContentId = "")]
+[PluginDetails(AuthorName = "ハイさん", ContentId = "")]
 public class TimerPlusShapePlugin : IShapePlugin, IPlugin
 {
     public string Name => "タイマー+";

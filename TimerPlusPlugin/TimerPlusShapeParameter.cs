@@ -1,23 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Windows.Media;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Controls;
-using YukkuriMovieMaker.Controls.AvalonEdit.AutoCompletionStrategy;
-using YukkuriMovieMaker.Controls.AvalonEdit.FoldingStrategy;
-using YukkuriMovieMaker.Controls.AvalonEdit.ToolBarStrategy;
 using YukkuriMovieMaker.Exo;
-using YukkuriMovieMaker.ItemEditor;
 using YukkuriMovieMaker.Player.Video;
-using YukkuriMovieMaker.Plugin;
-using YukkuriMovieMaker.Plugin.Effects;
 using YukkuriMovieMaker.Plugin.Shape;
 using YukkuriMovieMaker.Project;
 using YukkuriMovieMaker.Project.Items;
-using YukkuriMovieMaker.Resources.Localization;
 
 namespace TimerPlusPlugin;
 
@@ -25,6 +14,11 @@ public class TimerPlusShapeParameter : ShapeParameterBase
 {
     public TimerPlusShapeParameter(SharedDataStore? sharedData) : base(sharedData)
     {
+        dayDetailView = new DayDetailView(this);
+        hourDetailView = new HourDetailView(this);
+        minuteDetailView = new MinuteDetailView(this);
+        secondDetailView = new SecondDetailView(this);
+        fractionDetailView = new FractionDetailView(this);
     }
 
     [Obsolete]
@@ -32,419 +26,270 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     {
     }
 
-    [Display(GroupName = "書式", Name = "書式", Description = "表示形式を選択します。「カスタム」を選ぶと下の単位ごとの項目が有効になります")]
+    [Display(GroupName = "", Name = "書式", Description = "表示形式を選択します。「カスタム」を選ぶと下の単位ごとの項目が有効になります")]
     [EnumComboBox]
-    public TimerPlusFormat Format { get => field; set => Set(ref field, value); } = TimerPlusFormat.MMSSFF;
+    public TimerPlusFormat Format
+    {
+        get => field;
+        set => Set(ref field, value, etcChangedPropertyNames: [nameof(Day), nameof(Hour), nameof(Minute), nameof(Second), nameof(Fraction)]);
+    } = TimerPlusFormat.MMSSFF;
 
-    [Display(GroupName = "モード", Name = "モード", Description = "カウントアップ/カウントダウン")]
+    [Display(GroupName = "", Name = "モード", Description = "カウントアップ/カウントダウン")]
     [EnumComboBox]
     public TimerPlusCountDirection Direction { get => field; set => Set(ref field, value); } = TimerPlusCountDirection.CountUp;
 
-    [Display(GroupName = "モード", Name = "初期値反転", Description = "OFF: カウントダウンは初期値が終了値(初期値+長さから減少)、カウントアップは初期値が開始値(初期値から増加)。ON: この対応を入れ替えます(カウントアップは初期値が終了値、カウントダウンは初期値が開始値)")]
-    [ToggleSlider]
-    public bool IsInitialValueReversed { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "タイマー", Name = "初期時間", Description = "カウントの基準となる時間(00:00:00.00形式)")]
+    [Display(GroupName = "", Name = "初期値", Description = "カウントの基準となる時間(00:00:00.00の形で入力してください)")]
     [TimeSpanTextEditor]
     [TimeSpanDefaultValue]
     [TimeSpanRange]
     public TimeSpan InitialTime { get => field; set => Set(ref field, value); } = TimeSpan.Zero;
 
-    [Display(GroupName = "タイマー", Name = "初期値オフセット", Description = "初期値に加算される、イージング対応のオフセット(秒)", AutoGenerateField = true)]
+    [Display(GroupName = "", Name = "初期値オフセット", Description = "初期値に加算される、イージング対応のオフセット(秒)", AutoGenerateField = true)]
     [AnimationSlider("F2", "秒", -60, 60)]
     public Animation InitialValueOffset { get; } = new Animation(0.0, -2147483648.0, 2147483647.0);
 
-    [Display(GroupName = "タイマー", Name = "速度", Description = "再生速度(%)。Plusではマイナス方向(逆再生)にも対応。アイテム先頭からの積算(累計)で計算されます", AutoGenerateField = true)]
+    [Display(GroupName = "", Name = "速度", Description = "タイマーの再生速度を変更できます", AutoGenerateField = true)]
     [AnimationSlider("F0", "%", -1000, 1000)]
     public Animation PlaybackRate { get; } = new Animation(100.0, -100000.0, 100000.0);
 
-    [Display(GroupName = "日", Name = "日を使用する", Description = "書式が「カスタム」のとき、日の表示を有効にします")]
+    [Display(GroupName = "", Name = "初期値反転", Description = "初期値を終了値として扱うようにします")]
     [ToggleSlider]
-    public bool DayEnabled { get => field; set => Set(ref field, value); } = false;
+    public bool IsInitialValueReversed { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "日", Name = "日の桁数", Description = "0埋めする桁数")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(2)]
-    [Range(1, 10)]
-    public int DayDigits { get => field; set => Set(ref field, value); } = 2;
+    [Display(GroupName = "日", Name = "使用する", Description = "この単位の表示を有効にします")]
+    [ToggleSlider]
+    public bool DayEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Day)]); } = false;
 
-    [Display(GroupName = "日", Name = "日:前文字", Description = "日の数値の前に表示する文字列")]
-    [TextEditor]
+    [Display(GroupName = "日", Name = "設定", Description = "", AutoGenerateField = true)]
+    public DayDetailView? Day => (Format == TimerPlusFormat.Custom && DayEnabled) ? dayDetailView : null;
+
+    // 以下は実データ。UI表示は dayDetailView / dayFontView (プロキシ) 側の同名プロパティで行うため、
+    // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string DayPrefix { get => field; set => Set(ref field, value); } = "";
-
-    [Display(GroupName = "日", Name = "日:後文字", Description = "日の数値の後ろに表示する文字列")]
-    [TextEditor]
     public string DaySuffix { get => field; set => Set(ref field, value); } = ":";
-
-    [Display(GroupName = "日", Name = "表示行", Description = "表示する行番号(1〜)")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(1)]
-    [Range(1, 10)]
+    public int DayDigits { get => field; set => Set(ref field, value); } = 2;
     public int DayLine { get => field; set => Set(ref field, value); } = 1;
 
-    [Display(GroupName = "日", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
-    [ToggleSlider]
-    public bool DayCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+    public bool DayFixedDigits { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "日/文字", Name = "フォント", Description = "日の数値部分のフォント")]
-    [FontComboBox]
+    public bool DayCustomStyleEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) dayDetailView.RaiseFontEditorChanged(); }
+    } = false;
+
     public string DayFont { get => field; set => Set(ref field, value); } = "メイリオ";
-
-    [Display(GroupName = "日/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
-    [AnimationSlider("F0", "%", 1, 1000)]
-    public Animation DayFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
-
-    [Display(GroupName = "日/文字", Name = "文字色", Description = "日の数値部分の文字色")]
-    [ColorPicker]
+    public Animation DayFontSize { get; } = new Animation(100.0, 0.0, 100000.0);
     public Color DayFontColor { get => field; set => Set(ref field, value); } = Colors.White;
-
-    [Display(GroupName = "日/文字", Name = "太字", Description = "日の数値部分を太字にします")]
-    [ToggleSlider]
     public bool DayBold { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "日/文字", Name = "イタリック", Description = "日の数値部分を斜体にします")]
-    [ToggleSlider]
     public bool DayItalic { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "日/文字", Name = "下線", Description = "日の数値部分に下線を付けます")]
-    [ToggleSlider]
     public bool DayUnderline { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "日/文字", Name = "打ち消し線", Description = "日の数値部分に打ち消し線を付けます")]
-    [ToggleSlider]
     public bool DayStrikeThrough { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "日/文字", Name = "文字ごとに分割", Description = "日の数値部分を文字ごとに個別のグリフとして配置します")]
-    [ToggleSlider]
-    public bool DaySplitByCharacter { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "日/文字", Name = "装飾", Description = "日の数値部分の縁取り等の装飾")]
-    [EnumComboBox]
     public YukkuriMovieMaker.Project.Items.Style DayStyle { get => field; set => Set(ref field, value); } = YukkuriMovieMaker.Project.Items.Style.Normal;
-
-    [Display(GroupName = "日/文字", Name = "装飾色", Description = "日の数値部分の装飾色")]
-    [ColorPicker]
     public Color DayStyleColor { get => field; set => Set(ref field, value); } = Colors.Black;
+    public Animation DayOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation DayOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation DayRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation DayLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    [Display(GroupName = "時", Name = "時を使用する", Description = "書式が「カスタム」のとき、時の表示を有効にします")]
+    private readonly DayDetailView dayDetailView;
+
+    [Display(GroupName = "時", Name = "使用する", Description = "この単位の表示を有効にします")]
     [ToggleSlider]
-    public bool HourEnabled { get => field; set => Set(ref field, value); } = false;
+    public bool HourEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Hour)]); } = false;
 
-    [Display(GroupName = "時", Name = "時の桁数", Description = "0埋めする桁数")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(2)]
-    [Range(1, 10)]
-    public int HourDigits { get => field; set => Set(ref field, value); } = 2;
+    [Display(GroupName = "時", Name = "設定", Description = "", AutoGenerateField = true)]
+    public HourDetailView? Hour => (Format == TimerPlusFormat.Custom && HourEnabled) ? hourDetailView : null;
 
-    [Display(GroupName = "時", Name = "時:前文字", Description = "時の数値の前に表示する文字列")]
-    [TextEditor]
+    // 以下は実データ。UI表示は hourDetailView / hourFontView (プロキシ) 側の同名プロパティで行うため、
+    // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string HourPrefix { get => field; set => Set(ref field, value); } = "";
-
-    [Display(GroupName = "時", Name = "時:後文字", Description = "時の数値の後ろに表示する文字列")]
-    [TextEditor]
     public string HourSuffix { get => field; set => Set(ref field, value); } = ":";
-
-    [Display(GroupName = "時", Name = "表示行", Description = "表示する行番号(1〜)")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(1)]
-    [Range(1, 10)]
+    public int HourDigits { get => field; set => Set(ref field, value); } = 2;
     public int HourLine { get => field; set => Set(ref field, value); } = 1;
 
-    [Display(GroupName = "時", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
-    [ToggleSlider]
-    public bool HourCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+    public bool HourFixedDigits { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "時/文字", Name = "フォント", Description = "時の数値部分のフォント")]
-    [FontComboBox]
+    public bool HourCustomStyleEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) hourDetailView.RaiseFontEditorChanged(); }
+    } = false;
+
     public string HourFont { get => field; set => Set(ref field, value); } = "メイリオ";
-
-    [Display(GroupName = "時/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
-    [AnimationSlider("F0", "%", 1, 1000)]
-    public Animation HourFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
-
-    [Display(GroupName = "時/文字", Name = "文字色", Description = "時の数値部分の文字色")]
-    [ColorPicker]
+    public Animation HourFontSize { get; } = new Animation(100.0, 0.0, 100000.0);
     public Color HourFontColor { get => field; set => Set(ref field, value); } = Colors.White;
-
-    [Display(GroupName = "時/文字", Name = "太字", Description = "時の数値部分を太字にします")]
-    [ToggleSlider]
     public bool HourBold { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "時/文字", Name = "イタリック", Description = "時の数値部分を斜体にします")]
-    [ToggleSlider]
     public bool HourItalic { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "時/文字", Name = "下線", Description = "時の数値部分に下線を付けます")]
-    [ToggleSlider]
     public bool HourUnderline { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "時/文字", Name = "打ち消し線", Description = "時の数値部分に打ち消し線を付けます")]
-    [ToggleSlider]
     public bool HourStrikeThrough { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "時/文字", Name = "文字ごとに分割", Description = "時の数値部分を文字ごとに個別のグリフとして配置します")]
-    [ToggleSlider]
-    public bool HourSplitByCharacter { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "時/文字", Name = "装飾", Description = "時の数値部分の縁取り等の装飾")]
-    [EnumComboBox]
     public YukkuriMovieMaker.Project.Items.Style HourStyle { get => field; set => Set(ref field, value); } = YukkuriMovieMaker.Project.Items.Style.Normal;
-
-    [Display(GroupName = "時/文字", Name = "装飾色", Description = "時の数値部分の装飾色")]
-    [ColorPicker]
     public Color HourStyleColor { get => field; set => Set(ref field, value); } = Colors.Black;
+    public Animation HourOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation HourOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation HourRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation HourLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    [Display(GroupName = "分", Name = "分を使用する", Description = "書式が「カスタム」のとき、分の表示を有効にします")]
+    private readonly HourDetailView hourDetailView;
+
+    [Display(GroupName = "分", Name = "使用する", Description = "この単位の表示を有効にします")]
     [ToggleSlider]
-    public bool MinuteEnabled { get => field; set => Set(ref field, value); } = true;
+    public bool MinuteEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Minute)]); } = true;
 
-    [Display(GroupName = "分", Name = "分の桁数", Description = "0埋めする桁数")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(2)]
-    [Range(1, 10)]
-    public int MinuteDigits { get => field; set => Set(ref field, value); } = 2;
+    [Display(GroupName = "分", Name = "設定", Description = "", AutoGenerateField = true)]
+    public MinuteDetailView? Minute => (Format == TimerPlusFormat.Custom && MinuteEnabled) ? minuteDetailView : null;
 
-    [Display(GroupName = "分", Name = "分:前文字", Description = "分の数値の前に表示する文字列")]
-    [TextEditor]
+    // 以下は実データ。UI表示は minuteDetailView / minuteFontView (プロキシ) 側の同名プロパティで行うため、
+    // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string MinutePrefix { get => field; set => Set(ref field, value); } = "";
-
-    [Display(GroupName = "分", Name = "分:後文字", Description = "分の数値の後ろに表示する文字列")]
-    [TextEditor]
     public string MinuteSuffix { get => field; set => Set(ref field, value); } = ":";
-
-    [Display(GroupName = "分", Name = "表示行", Description = "表示する行番号(1〜)")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(1)]
-    [Range(1, 10)]
+    public int MinuteDigits { get => field; set => Set(ref field, value); } = 2;
     public int MinuteLine { get => field; set => Set(ref field, value); } = 1;
 
-    [Display(GroupName = "分", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
-    [ToggleSlider]
-    public bool MinuteCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+    public bool MinuteFixedDigits { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "分/文字", Name = "フォント", Description = "分の数値部分のフォント")]
-    [FontComboBox]
+    public bool MinuteCustomStyleEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) minuteDetailView.RaiseFontEditorChanged(); }
+    } = false;
+
     public string MinuteFont { get => field; set => Set(ref field, value); } = "メイリオ";
-
-    [Display(GroupName = "分/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
-    [AnimationSlider("F0", "%", 1, 1000)]
-    public Animation MinuteFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
-
-    [Display(GroupName = "分/文字", Name = "文字色", Description = "分の数値部分の文字色")]
-    [ColorPicker]
+    public Animation MinuteFontSize { get; } = new Animation(100.0, 0.0, 100000.0);
     public Color MinuteFontColor { get => field; set => Set(ref field, value); } = Colors.White;
-
-    [Display(GroupName = "分/文字", Name = "太字", Description = "分の数値部分を太字にします")]
-    [ToggleSlider]
     public bool MinuteBold { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "分/文字", Name = "イタリック", Description = "分の数値部分を斜体にします")]
-    [ToggleSlider]
     public bool MinuteItalic { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "分/文字", Name = "下線", Description = "分の数値部分に下線を付けます")]
-    [ToggleSlider]
     public bool MinuteUnderline { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "分/文字", Name = "打ち消し線", Description = "分の数値部分に打ち消し線を付けます")]
-    [ToggleSlider]
     public bool MinuteStrikeThrough { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "分/文字", Name = "文字ごとに分割", Description = "分の数値部分を文字ごとに個別のグリフとして配置します")]
-    [ToggleSlider]
-    public bool MinuteSplitByCharacter { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "分/文字", Name = "装飾", Description = "分の数値部分の縁取り等の装飾")]
-    [EnumComboBox]
     public YukkuriMovieMaker.Project.Items.Style MinuteStyle { get => field; set => Set(ref field, value); } = YukkuriMovieMaker.Project.Items.Style.Normal;
-
-    [Display(GroupName = "分/文字", Name = "装飾色", Description = "分の数値部分の装飾色")]
-    [ColorPicker]
     public Color MinuteStyleColor { get => field; set => Set(ref field, value); } = Colors.Black;
+    public Animation MinuteOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation MinuteOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation MinuteRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation MinuteLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    [Display(GroupName = "秒", Name = "秒を使用する", Description = "書式が「カスタム」のとき、秒の表示を有効にします")]
+    private readonly MinuteDetailView minuteDetailView;
+
+    [Display(GroupName = "秒", Name = "使用する", Description = "この単位の表示を有効にします")]
     [ToggleSlider]
-    public bool SecondEnabled { get => field; set => Set(ref field, value); } = true;
+    public bool SecondEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Second)]); } = true;
 
-    [Display(GroupName = "秒", Name = "秒の桁数", Description = "0埋めする桁数")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(2)]
-    [Range(1, 10)]
-    public int SecondDigits { get => field; set => Set(ref field, value); } = 2;
+    [Display(GroupName = "秒", Name = "設定", Description = "", AutoGenerateField = true)]
+    public SecondDetailView? Second => (Format == TimerPlusFormat.Custom && SecondEnabled) ? secondDetailView : null;
 
-    [Display(GroupName = "秒", Name = "秒:前文字", Description = "秒の数値の前に表示する文字列")]
-    [TextEditor]
+    // 以下は実データ。UI表示は secondDetailView / secondFontView (プロキシ) 側の同名プロパティで行うため、
+    // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string SecondPrefix { get => field; set => Set(ref field, value); } = "";
-
-    [Display(GroupName = "秒", Name = "秒:後文字", Description = "秒の数値の後ろに表示する文字列(小数秒を使う場合は小数点などをここに入れます)")]
-    [TextEditor]
     public string SecondSuffix { get => field; set => Set(ref field, value); } = ".";
-
-    [Display(GroupName = "秒", Name = "表示行", Description = "表示する行番号(1〜)")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(1)]
-    [Range(1, 10)]
+    public int SecondDigits { get => field; set => Set(ref field, value); } = 2;
     public int SecondLine { get => field; set => Set(ref field, value); } = 1;
 
-    [Display(GroupName = "秒", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
-    [ToggleSlider]
-    public bool SecondCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+    public bool SecondFixedDigits { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "秒/文字", Name = "フォント", Description = "秒の数値部分のフォント")]
-    [FontComboBox]
+    public bool SecondCustomStyleEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) secondDetailView.RaiseFontEditorChanged(); }
+    } = false;
+
     public string SecondFont { get => field; set => Set(ref field, value); } = "メイリオ";
-
-    [Display(GroupName = "秒/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
-    [AnimationSlider("F0", "%", 1, 1000)]
-    public Animation SecondFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
-
-    [Display(GroupName = "秒/文字", Name = "文字色", Description = "秒の数値部分の文字色")]
-    [ColorPicker]
+    public Animation SecondFontSize { get; } = new Animation(100.0, 0.0, 100000.0);
     public Color SecondFontColor { get => field; set => Set(ref field, value); } = Colors.White;
-
-    [Display(GroupName = "秒/文字", Name = "太字", Description = "秒の数値部分を太字にします")]
-    [ToggleSlider]
     public bool SecondBold { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "秒/文字", Name = "イタリック", Description = "秒の数値部分を斜体にします")]
-    [ToggleSlider]
     public bool SecondItalic { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "秒/文字", Name = "下線", Description = "秒の数値部分に下線を付けます")]
-    [ToggleSlider]
     public bool SecondUnderline { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "秒/文字", Name = "打ち消し線", Description = "秒の数値部分に打ち消し線を付けます")]
-    [ToggleSlider]
     public bool SecondStrikeThrough { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "秒/文字", Name = "文字ごとに分割", Description = "秒の数値部分を文字ごとに個別のグリフとして配置します")]
-    [ToggleSlider]
-    public bool SecondSplitByCharacter { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "秒/文字", Name = "装飾", Description = "秒の数値部分の縁取り等の装飾")]
-    [EnumComboBox]
     public YukkuriMovieMaker.Project.Items.Style SecondStyle { get => field; set => Set(ref field, value); } = YukkuriMovieMaker.Project.Items.Style.Normal;
-
-    [Display(GroupName = "秒/文字", Name = "装飾色", Description = "秒の数値部分の装飾色")]
-    [ColorPicker]
     public Color SecondStyleColor { get => field; set => Set(ref field, value); } = Colors.Black;
+    public Animation SecondOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation SecondOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation SecondRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation SecondLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    [Display(GroupName = "小数秒", Name = "小数秒を使用する", Description = "書式が「カスタム」のとき、小数秒の表示を有効にします")]
+    private readonly SecondDetailView secondDetailView;
+
+    [Display(GroupName = "小数秒", Name = "使用する", Description = "この単位の表示を有効にします")]
     [ToggleSlider]
-    public bool FractionEnabled { get => field; set => Set(ref field, value); } = true;
+    public bool FractionEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Fraction)]); } = true;
 
-    [Display(GroupName = "小数秒", Name = "小数秒の桁数", Description = "0埋めする桁数")]
-    [TextBoxSlider("F0", "", 1, 6)]
-    [DefaultValue(2)]
-    [Range(1, 6)]
-    public int FractionDigits { get => field; set => Set(ref field, value); } = 2;
+    [Display(GroupName = "小数秒", Name = "設定", Description = "", AutoGenerateField = true)]
+    public FractionDetailView? Fraction => (Format == TimerPlusFormat.Custom && FractionEnabled) ? fractionDetailView : null;
 
-    [Display(GroupName = "小数秒", Name = "小数秒:前文字", Description = "小数秒の数値の前に表示する文字列(通常は空でOK。秒の後文字に小数点を入れます)")]
-    [TextEditor]
+    // 以下は実データ。UI表示は fractionDetailView / fractionFontView (プロキシ) 側の同名プロパティで行うため、
+    // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string FractionPrefix { get => field; set => Set(ref field, value); } = "";
-
-    [Display(GroupName = "小数秒", Name = "小数秒:後文字", Description = "小数秒の数値の後ろに表示する文字列")]
-    [TextEditor]
     public string FractionSuffix { get => field; set => Set(ref field, value); } = "";
-
-    [Display(GroupName = "小数秒", Name = "表示行", Description = "表示する行番号(1〜)")]
-    [TextBoxSlider("F0", "", 1, 10)]
-    [DefaultValue(1)]
-    [Range(1, 10)]
+    public int FractionDigits { get => field; set => Set(ref field, value); } = 2;
     public int FractionLine { get => field; set => Set(ref field, value); } = 1;
 
-    [Display(GroupName = "小数秒", Name = "個別設定", Description = "ONのときはこの単位専用のスタイル設定を使用します。OFFのときは文字グループの設定をそのまま使用します")]
-    [ToggleSlider]
-    public bool FractionCustomStyleEnabled { get => field; set => Set(ref field, value); } = false;
+    public bool FractionFixedDigits { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "小数秒/文字", Name = "フォント", Description = "小数秒の数値部分のフォント")]
-    [FontComboBox]
+    public bool FractionCustomStyleEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) fractionDetailView.RaiseFontEditorChanged(); }
+    } = false;
+
     public string FractionFont { get => field; set => Set(ref field, value); } = "メイリオ";
-
-    [Display(GroupName = "小数秒/文字", Name = "サイズ", Description = "文字グループのサイズに対する割合(%)。100で同じサイズ", AutoGenerateField = true)]
-    [AnimationSlider("F0", "%", 1, 1000)]
-    public Animation FractionFontSize { get; } = new Animation(100.0, 1.0, 100000.0);
-
-    [Display(GroupName = "小数秒/文字", Name = "文字色", Description = "小数秒の数値部分の文字色")]
-    [ColorPicker]
+    public Animation FractionFontSize { get; } = new Animation(100.0, 0.0, 100000.0);
     public Color FractionFontColor { get => field; set => Set(ref field, value); } = Colors.White;
-
-    [Display(GroupName = "小数秒/文字", Name = "太字", Description = "小数秒の数値部分を太字にします")]
-    [ToggleSlider]
     public bool FractionBold { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "小数秒/文字", Name = "イタリック", Description = "小数秒の数値部分を斜体にします")]
-    [ToggleSlider]
     public bool FractionItalic { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "小数秒/文字", Name = "下線", Description = "小数秒の数値部分に下線を付けます")]
-    [ToggleSlider]
     public bool FractionUnderline { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "小数秒/文字", Name = "打ち消し線", Description = "小数秒の数値部分に打ち消し線を付けます")]
-    [ToggleSlider]
     public bool FractionStrikeThrough { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "小数秒/文字", Name = "文字ごとに分割", Description = "小数秒の数値部分を文字ごとに個別のグリフとして配置します")]
-    [ToggleSlider]
-    public bool FractionSplitByCharacter { get => field; set => Set(ref field, value); } = false;
-
-    [Display(GroupName = "小数秒/文字", Name = "装飾", Description = "小数秒の数値部分の縁取り等の装飾")]
-    [EnumComboBox]
     public YukkuriMovieMaker.Project.Items.Style FractionStyle { get => field; set => Set(ref field, value); } = YukkuriMovieMaker.Project.Items.Style.Normal;
-
-    [Display(GroupName = "小数秒/文字", Name = "装飾色", Description = "小数秒の数値部分の装飾色")]
-    [ColorPicker]
     public Color FractionStyleColor { get => field; set => Set(ref field, value); } = Colors.Black;
+    public Animation FractionOffsetX { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation FractionOffsetY { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation FractionRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
+    public Animation FractionLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    [Display(GroupName = "文字", Name = "フォント")]
+    private readonly FractionDetailView fractionDetailView;
+
+    [Display(GroupName = "テキスト", Name = "フォント")]
     [FontComboBox]
     public string Font { get => field; set => Set(ref field, value); } = "メイリオ";
 
-    [Display(GroupName = "文字", Name = "サイズ", AutoGenerateField = true)]
-    [AnimationSlider("F0", "px", 1, 500)]
-    public Animation FontSize { get; } = new Animation(34.0, 1.0, 100000.0);
+    [Display(GroupName = "テキスト", Name = "サイズ", AutoGenerateField = true)]
+    [AnimationSlider("F1", "px", 0, 100)]
+    public Animation FontSize { get; } = new Animation(100.0, 0.0, 1000000.0);
 
-    [Display(GroupName = "文字", Name = "文字間隔", AutoGenerateField = true)]
-    [AnimationSlider("F0", "px", -100, 100)]
+    [Display(GroupName = "テキスト", Name = "文字間隔", AutoGenerateField = true)]
+    [AnimationSlider("F1", "px", -100, 100)]
     public Animation LetterSpacing2 { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    [Display(GroupName = "文字", Name = "文字揃え")]
+    [Display(GroupName = "テキスト", Name = "文字揃え")]
     [EnumComboBox]
     public BasePoint BasePoint { get => field; set => Set(ref field, value); } = BasePoint.CenterCenter;
 
-    [Display(GroupName = "文字", Name = "文字色")]
+    [Display(GroupName = "テキスト", Name = "文字色")]
     [ColorPicker]
     public Color FontColor { get => field; set => Set(ref field, value); } = Colors.White;
 
-    [Display(GroupName = "文字", Name = "装飾")]
+    [Display(GroupName = "テキスト", Name = "装飾")]
     [EnumComboBox]
     public YukkuriMovieMaker.Project.Items.Style Style { get => field; set => Set(ref field, value); } = YukkuriMovieMaker.Project.Items.Style.Normal;
 
-    [Display(GroupName = "文字", Name = "装飾色")]
+    [Display(GroupName = "テキスト", Name = "装飾色")]
     [ColorPicker]
     public Color StyleColor { get => field; set => Set(ref field, value); } = Colors.Black;
 
-    [Display(GroupName = "文字", Name = "太字")]
+    [Display(GroupName = "テキスト", Name = "太字")]
     [ToggleSlider]
     public bool Bold { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "文字", Name = "イタリック")]
+    [Display(GroupName = "テキスト", Name = "イタリック")]
     [ToggleSlider]
     public bool Italic { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "文字", Name = "下線")]
+    [Display(GroupName = "テキスト", Name = "下線")]
     [ToggleSlider]
     public bool Underline { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "文字", Name = "打ち消し線")]
+    [Display(GroupName = "テキスト", Name = "打ち消し線")]
     [ToggleSlider]
     public bool StrikeThrough { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "文字", Name = "文字ごとに分割", Description = "文字ごとに個別のグリフとして配置します(合字・カーニングを無効化)")]
-    [ToggleSlider]
-    public bool SplitByCharacter { get => field; set => Set(ref field, value); } = false;
 
     public override IShapeSource CreateShapeSource(IGraphicsDevicesAndContext devices)
         => new TimerPlusShapeSource(devices, this);
@@ -455,15 +300,22 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public override IEnumerable<string> CreateMaskExoFilter(int keyFrameIndex, ExoOutputDescription exoOutputDescription, ShapeMaskExoOutputDescription shapeMaskParameters)
         => Array.Empty<string>();
 
-    protected override IEnumerable<IAnimatable> GetAnimatables()
-        => [InitialValueOffset, PlaybackRate, FontSize, LetterSpacing2, DayFontSize, HourFontSize, MinuteFontSize, SecondFontSize, FractionFontSize];
+    protected override IEnumerable<IAnimatable> GetAnimatables() =>
+    [
+        InitialValueOffset, PlaybackRate, FontSize, LetterSpacing2,
+            DayFontSize, DayOffsetX, DayOffsetY, DayRotationAngle, DayLetterSpacing,
+            HourFontSize, HourOffsetX, HourOffsetY, HourRotationAngle, HourLetterSpacing,
+            MinuteFontSize, MinuteOffsetX, MinuteOffsetY, MinuteRotationAngle, MinuteLetterSpacing,
+            SecondFontSize, SecondOffsetX, SecondOffsetY, SecondRotationAngle, SecondLetterSpacing,
+            FractionFontSize, FractionOffsetX, FractionOffsetY, FractionRotationAngle, FractionLetterSpacing,
+    ];
 
     internal TimerPlusCustomSettings CreateCustomSettings() => new(
-        new TimerPlusUnitSettings(DayEnabled, DayDigits, DayPrefix, DaySuffix, DayLine, DayCustomStyleEnabled),
-        new TimerPlusUnitSettings(HourEnabled, HourDigits, HourPrefix, HourSuffix, HourLine, HourCustomStyleEnabled),
-        new TimerPlusUnitSettings(MinuteEnabled, MinuteDigits, MinutePrefix, MinuteSuffix, MinuteLine, MinuteCustomStyleEnabled),
-        new TimerPlusUnitSettings(SecondEnabled, SecondDigits, SecondPrefix, SecondSuffix, SecondLine, SecondCustomStyleEnabled),
-        new TimerPlusUnitSettings(FractionEnabled, FractionDigits, FractionPrefix, FractionSuffix, FractionLine, FractionCustomStyleEnabled));
+        new TimerPlusUnitSettings(DayEnabled, DayDigits, DayPrefix, DaySuffix, DayLine, DayFixedDigits, DayCustomStyleEnabled),
+        new TimerPlusUnitSettings(HourEnabled, HourDigits, HourPrefix, HourSuffix, HourLine, HourFixedDigits, HourCustomStyleEnabled),
+        new TimerPlusUnitSettings(MinuteEnabled, MinuteDigits, MinutePrefix, MinuteSuffix, MinuteLine, MinuteFixedDigits, MinuteCustomStyleEnabled),
+        new TimerPlusUnitSettings(SecondEnabled, SecondDigits, SecondPrefix, SecondSuffix, SecondLine, SecondFixedDigits, SecondCustomStyleEnabled),
+        new TimerPlusUnitSettings(FractionEnabled, FractionDigits, FractionPrefix, FractionSuffix, FractionLine, FractionFixedDigits, FractionCustomStyleEnabled));
 
     protected override void LoadSharedData(SharedDataStore sharedData)
     {
@@ -491,7 +343,6 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         Italic = data.Italic;
         Underline = data.Underline;
         StrikeThrough = data.StrikeThrough;
-        SplitByCharacter = data.SplitByCharacter;
         BasePoint = data.BasePoint;
 
         Format = data.Format;
@@ -501,9 +352,9 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         InitialTime = data.InitialTime;
 
         DayEnabled = data.DayEnabled;
-        DayDigits = data.DayDigits;
         DayPrefix = data.DayPrefix;
         DaySuffix = data.DaySuffix;
+        DayDigits = data.DayDigits;
         DayLine = data.DayLine;
         DayCustomStyleEnabled = data.DayCustomStyleEnabled;
         DayFont = data.DayFont;
@@ -513,14 +364,18 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         DayItalic = data.DayItalic;
         DayUnderline = data.DayUnderline;
         DayStrikeThrough = data.DayStrikeThrough;
-        DaySplitByCharacter = data.DaySplitByCharacter;
+        DayFixedDigits = data.DayFixedDigits;
         DayStyle = data.DayStyle;
         DayStyleColor = data.DayStyleColor;
+        DayOffsetX.CopyFrom(data.DayOffsetX);
+        DayOffsetY.CopyFrom(data.DayOffsetY);
+        DayRotationAngle.CopyFrom(data.DayRotationAngle);
+        DayLetterSpacing.CopyFrom(data.DayLetterSpacing);
 
         HourEnabled = data.HourEnabled;
-        HourDigits = data.HourDigits;
         HourPrefix = data.HourPrefix;
         HourSuffix = data.HourSuffix;
+        HourDigits = data.HourDigits;
         HourLine = data.HourLine;
         HourCustomStyleEnabled = data.HourCustomStyleEnabled;
         HourFont = data.HourFont;
@@ -530,14 +385,18 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         HourItalic = data.HourItalic;
         HourUnderline = data.HourUnderline;
         HourStrikeThrough = data.HourStrikeThrough;
-        HourSplitByCharacter = data.HourSplitByCharacter;
+        HourFixedDigits = data.HourFixedDigits;
         HourStyle = data.HourStyle;
         HourStyleColor = data.HourStyleColor;
+        HourOffsetX.CopyFrom(data.HourOffsetX);
+        HourOffsetY.CopyFrom(data.HourOffsetY);
+        HourRotationAngle.CopyFrom(data.HourRotationAngle);
+        HourLetterSpacing.CopyFrom(data.HourLetterSpacing);
 
         MinuteEnabled = data.MinuteEnabled;
-        MinuteDigits = data.MinuteDigits;
         MinutePrefix = data.MinutePrefix;
         MinuteSuffix = data.MinuteSuffix;
+        MinuteDigits = data.MinuteDigits;
         MinuteLine = data.MinuteLine;
         MinuteCustomStyleEnabled = data.MinuteCustomStyleEnabled;
         MinuteFont = data.MinuteFont;
@@ -547,14 +406,18 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         MinuteItalic = data.MinuteItalic;
         MinuteUnderline = data.MinuteUnderline;
         MinuteStrikeThrough = data.MinuteStrikeThrough;
-        MinuteSplitByCharacter = data.MinuteSplitByCharacter;
+        MinuteFixedDigits = data.MinuteFixedDigits;
         MinuteStyle = data.MinuteStyle;
         MinuteStyleColor = data.MinuteStyleColor;
+        MinuteOffsetX.CopyFrom(data.MinuteOffsetX);
+        MinuteOffsetY.CopyFrom(data.MinuteOffsetY);
+        MinuteRotationAngle.CopyFrom(data.MinuteRotationAngle);
+        MinuteLetterSpacing.CopyFrom(data.MinuteLetterSpacing);
 
         SecondEnabled = data.SecondEnabled;
-        SecondDigits = data.SecondDigits;
         SecondPrefix = data.SecondPrefix;
         SecondSuffix = data.SecondSuffix;
+        SecondDigits = data.SecondDigits;
         SecondLine = data.SecondLine;
         SecondCustomStyleEnabled = data.SecondCustomStyleEnabled;
         SecondFont = data.SecondFont;
@@ -564,14 +427,18 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         SecondItalic = data.SecondItalic;
         SecondUnderline = data.SecondUnderline;
         SecondStrikeThrough = data.SecondStrikeThrough;
-        SecondSplitByCharacter = data.SecondSplitByCharacter;
+        SecondFixedDigits = data.SecondFixedDigits;
         SecondStyle = data.SecondStyle;
         SecondStyleColor = data.SecondStyleColor;
+        SecondOffsetX.CopyFrom(data.SecondOffsetX);
+        SecondOffsetY.CopyFrom(data.SecondOffsetY);
+        SecondRotationAngle.CopyFrom(data.SecondRotationAngle);
+        SecondLetterSpacing.CopyFrom(data.SecondLetterSpacing);
 
         FractionEnabled = data.FractionEnabled;
-        FractionDigits = data.FractionDigits;
         FractionPrefix = data.FractionPrefix;
         FractionSuffix = data.FractionSuffix;
+        FractionDigits = data.FractionDigits;
         FractionLine = data.FractionLine;
         FractionCustomStyleEnabled = data.FractionCustomStyleEnabled;
         FractionFont = data.FractionFont;
@@ -581,8 +448,13 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         FractionItalic = data.FractionItalic;
         FractionUnderline = data.FractionUnderline;
         FractionStrikeThrough = data.FractionStrikeThrough;
-        FractionSplitByCharacter = data.FractionSplitByCharacter;
+        FractionFixedDigits = data.FractionFixedDigits;
         FractionStyle = data.FractionStyle;
         FractionStyleColor = data.FractionStyleColor;
+        FractionOffsetX.CopyFrom(data.FractionOffsetX);
+        FractionOffsetY.CopyFrom(data.FractionOffsetY);
+        FractionRotationAngle.CopyFrom(data.FractionRotationAngle);
+        FractionLetterSpacing.CopyFrom(data.FractionLetterSpacing);
+
     }
 }

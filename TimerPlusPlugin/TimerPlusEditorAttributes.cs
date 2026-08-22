@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace TimerPlusPlugin;
+﻿namespace TimerPlusPlugin;
 
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class TimeSpanEditorAttribute : Attribute

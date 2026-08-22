@@ -25,7 +25,6 @@ internal class TimerPlusShapeSource : IShapeSource
 
     private readonly List<LineRenderer> lineRenderers = new();
 
-    private bool isFirst = true;
     private bool errorLogged;
     private ID2D1SolidColorBrush? errorBrush;
     private ID2D1CommandList? errorCommandList;
@@ -33,8 +32,6 @@ internal class TimerPlusShapeSource : IShapeSource
 
     private int cachedFrame = -1;
     private double cachedCumulativeRateSeconds;
-
-    private string lastCacheKey = string.Empty;
 
     public ID2D1Image Output { get; private set; } = null!;
 
@@ -66,12 +63,13 @@ internal class TimerPlusShapeSource : IShapeSource
         TimeSpan counterTime = ComputeCounterTime(frame, length, fps, duration);
         var lines = TimerPlusFormatter.FormatLines(counterTime, parameter.Format, parameter.CreateCustomSettings());
 
-        // 行ごとにテキストとDecorationsを構築
-        var lineData = new List<(string text, ImmutableList<TextDecoration> decorations)>();
+        // 行ごとに、「揃え計算用(オフセットなし)」と「実描画用(オフセットあり)」の2種類のDecorationsを構築
+        var lineData = new List<(string text, ImmutableList<TextDecoration> measureDecorations, ImmutableList<TextDecoration> renderDecorations)>();
         foreach (var line in lines)
         {
             var sb = new StringBuilder();
-            var decorations = new List<TextDecoration>();
+            var measureDecorations = new List<TextDecoration>();
+            var renderDecorations = new List<TextDecoration>();
             foreach (var segment in line.Segments)
             {
                 int start = sb.Length;
@@ -81,45 +79,62 @@ internal class TimerPlusShapeSource : IShapeSource
 
                 if (segment.Unit != TimerPlusUnitKind.Default)
                 {
-                    var d = BuildDecoration(segment.Unit, start, len, frame, length, fps);
-                    if (d != null) decorations.Add(d);
+                    var measureD = BuildDecoration(segment.Unit, start, len, frame, length, fps, applyOffsets: false);
+                    if (measureD != null) measureDecorations.Add(measureD);
+                    var renderD = BuildDecoration(segment.Unit, start, len, frame, length, fps, applyOffsets: true);
+                    if (renderD != null) renderDecorations.Add(renderD);
                 }
             }
-            lineData.Add((sb.Length == 0 ? " " : sb.ToString(), decorations.ToImmutableList()));
+            string text = sb.Length == 0 ? " " : sb.ToString();
+            lineData.Add((text, measureDecorations.ToImmutableList(), renderDecorations.ToImmutableList()));
         }
 
-        // 変化検知用のキャッシュキー(何か変わったら丸ごと作り直す)
-        var keyBuilder = new StringBuilder();
-        keyBuilder.Append(parameter.Font).Append('|');
-        keyBuilder.Append(parameter.FontSize.GetValue(frame, length, fps)).Append('|');
-        keyBuilder.Append(parameter.LetterSpacing2.GetValue(frame, length, fps)).Append('|');
-        keyBuilder.Append(parameter.BasePoint).Append('|');
-        keyBuilder.Append(parameter.FontColor).Append('|');
-        keyBuilder.Append(parameter.Style).Append('|');
-        keyBuilder.Append(parameter.StyleColor).Append('|');
-        keyBuilder.Append(parameter.Bold).Append('|');
-        keyBuilder.Append(parameter.Italic).Append('|');
-        keyBuilder.Append(parameter.Underline).Append('|');
-        keyBuilder.Append(parameter.StrikeThrough).Append('|');
-        keyBuilder.Append(parameter.SplitByCharacter);
-        foreach (var (text, decorations) in lineData)
+        // キャッシュによる差分判定はせず、毎回必ず再構築する(パラメーター変更が確実にプレビューへ反映されるようにするため)。
+        if (lineData.Count == 1)
         {
-            keyBuilder.Append("##").Append(text);
-            foreach (var d in decorations)
-                keyBuilder.Append('~').Append(d);
+            // 行が1つだけ(カスタム書式以外、またはカスタムでも1行にまとめている場合)は、
+            // 自前で揃え計算をせず、TextItem自身のBasePoint処理にそのまま委ねる。
+            // これにより既存の通常テキストアイテムと完全に同じ配置になる。
+            RenderSingleLineNative(lineData[0], desc);
         }
-        string cacheKey = keyBuilder.ToString();
-
-        if (isFirst || cacheKey != lastCacheKey)
+        else
         {
             RenderComposite(lineData, desc, frame, length, fps);
-            lastCacheKey = cacheKey;
         }
-
-        isFirst = false;
     }
 
-    private void RenderComposite(List<(string text, ImmutableList<TextDecoration> decorations)> lineData, TimelineItemSourceDescription desc, int frame, int length, int fps)
+    private void RenderSingleLineNative((string text, ImmutableList<TextDecoration> measureDecorations, ImmutableList<TextDecoration> renderDecorations) line, TimelineItemSourceDescription desc)
+    {
+        compositeCommandList?.Dispose();
+        compositeCommandList = null;
+
+        while (lineRenderers.Count < 1)
+            lineRenderers.Add(new LineRenderer(devices));
+        while (lineRenderers.Count > 1)
+        {
+            lineRenderers[^1].Dispose();
+            lineRenderers.RemoveAt(lineRenderers.Count - 1);
+        }
+
+        var renderer = lineRenderers[0];
+        renderer.Item.Text = line.text;
+        renderer.Item.Font = parameter.Font;
+        renderer.Item.FontSize.CopyFrom(parameter.FontSize);
+        renderer.Item.LetterSpacing2.CopyFrom(parameter.LetterSpacing2);
+        renderer.Item.BasePoint = parameter.BasePoint; // 揃え・縦書きはすべてTextItem自身に任せる
+        renderer.Item.FontColor = parameter.FontColor;
+        renderer.Item.Style = parameter.Style;
+        renderer.Item.StyleColor = parameter.StyleColor;
+        renderer.Item.Bold = parameter.Bold;
+        renderer.Item.Italic = parameter.Italic;
+        renderer.Item.Underline = parameter.Underline;
+        renderer.Item.Strikethrough = parameter.StrikeThrough;
+        renderer.Item.Decorations = line.renderDecorations;
+
+        Output = renderer.Update(desc);
+    }
+
+    private void RenderComposite(List<(string text, ImmutableList<TextDecoration> measureDecorations, ImmutableList<TextDecoration> renderDecorations)> lineData, TimelineItemSourceDescription desc, int frame, int length, int fps)
     {
         // 行数分の LineRenderer を確保(過不足を作成/破棄)
         while (lineRenderers.Count < lineData.Count)
@@ -132,13 +147,8 @@ internal class TimerPlusShapeSource : IShapeSource
 
         var dc = devices.DeviceContext;
 
-        // 各行を左上基準で更新し、画像とサイズを取得(全体の配置はBasePointで後調整)
-        var lineImages = new List<(ID2D1Image image, float width, float height)>();
-        for (int i = 0; i < lineData.Count; i++)
+        void ApplyCommonItemProperties(LineRenderer renderer, string text)
         {
-            var renderer = lineRenderers[i];
-            var (text, decorations) = lineData[i];
-
             renderer.Item.Text = text;
             renderer.Item.Font = parameter.Font;
             renderer.Item.FontSize.CopyFrom(parameter.FontSize);
@@ -151,18 +161,26 @@ internal class TimerPlusShapeSource : IShapeSource
             renderer.Item.Italic = parameter.Italic;
             renderer.Item.Underline = parameter.Underline;
             renderer.Item.Strikethrough = parameter.StrikeThrough;
-            renderer.Item.IsDevidedPerCharacter = parameter.SplitByCharacter;
-            renderer.Item.Decorations = decorations;
-
-            var image = renderer.Update(desc);
-
-            var bounds = dc.GetImageLocalBounds(image);
-            float w = Math.Max(0, bounds.Right - bounds.Left);
-            float h = Math.Max(0, bounds.Bottom - bounds.Top);
-            lineImages.Add((image, w, h));
         }
 
-        if (lineImages.Count == 0)
+        // 1パス目: オフセットなしのDecorationsで測定し、文字揃え(揃え位置)を先に決める。
+        var measuredSizes = new List<(float width, float height)>();
+        for (int i = 0; i < lineData.Count; i++)
+        {
+            var renderer = lineRenderers[i];
+            var (text, measureDecorations, _) = lineData[i];
+
+            ApplyCommonItemProperties(renderer, text);
+            renderer.Item.Decorations = measureDecorations;
+
+            var measureImage = renderer.Update(desc);
+            var bounds = dc.GetImageLocalBounds(measureImage);
+            float w = Math.Max(0, bounds.Right - bounds.Left);
+            float h = Math.Max(0, bounds.Bottom - bounds.Top);
+            measuredSizes.Add((w, h));
+        }
+
+        if (measuredSizes.Count == 0)
         {
             compositeCommandList?.Dispose();
             var empty = dc.CreateCommandList();
@@ -179,7 +197,7 @@ internal class TimerPlusShapeSource : IShapeSource
 
         float totalWidth = 0;
         float totalHeight = 0;
-        foreach (var (_, w, h) in lineImages)
+        foreach (var (w, h) in measuredSizes)
         {
             totalWidth = Math.Max(totalWidth, w);
             totalHeight += h;
@@ -187,6 +205,22 @@ internal class TimerPlusShapeSource : IShapeSource
 
         var (horizontalAlign, verticalAlign) = GetAlignment(parameter.BasePoint);
         var (originX, originY) = GetOrigin(horizontalAlign, verticalAlign, totalWidth, totalHeight);
+
+        // 2パス目: 個別設定のX/Y/回転角を含めたDecorationsで実際に描画する画像を作る。
+        // 配置座標・行送りは1パス目で測定した(オフセットを含まない)サイズを使うため、
+        // 個々の単位のズレが全体の揃え・行の積み上げに影響しない。
+        var lineImages = new List<(ID2D1Image image, float width, float height)>();
+        for (int i = 0; i < lineData.Count; i++)
+        {
+            var renderer = lineRenderers[i];
+            var (text, _, renderDecorations) = lineData[i];
+
+            ApplyCommonItemProperties(renderer, text);
+            renderer.Item.Decorations = renderDecorations;
+
+            var image = renderer.Update(desc);
+            lineImages.Add((image, measuredSizes[i].width, measuredSizes[i].height));
+        }
 
         compositeCommandList?.Dispose();
         var newCommandList = dc.CreateCommandList();
@@ -261,83 +295,108 @@ internal class TimerPlusShapeSource : IShapeSource
     }
 
     /// <summary>各単位の文字範囲に対するTextDecorationを作る(個別設定ONならその単位専用の値、OFFなら文字グループの値)。</summary>
-    private TextDecoration? BuildDecoration(TimerPlusUnitKind unit, int start, int length, int frame, int lengthFrames, int fps)
+    /// <summary>
+    /// 各単位の文字範囲に対するTextDecorationを作る。
+    /// applyOffsets=false: 文字揃え計算用の測定パス(位置/回転オフセットを含めない)。
+    /// applyOffsets=true: 実描画パス(位置/回転オフセットを含める)。
+    /// フォント/サイズ/色/装飾など見た目に関わる項目はどちらのパスでも同じ値を使う
+    /// (測定パスの画像と実描画パスの画像でサイズが食い違わないようにするため)。
+    /// </summary>
+    private TextDecoration? BuildDecoration(TimerPlusUnitKind unit, int start, int length, int frame, int lengthFrames, int fps, bool applyOffsets)
     {
-        string font;
-        Animation fontSizeAnim;
-        WpfColor fontColor;
-        bool bold, italic, underline, strike;
-        YukkuriMovieMaker.Project.Items.Style style;
-        WpfColor styleColor;
         bool useCustom;
+        string customFont, groupFont;
+        WpfColor customFontColor, customStyleColor;
+        bool customBold, customItalic, customUnderline, customStrike;
+        YukkuriMovieMaker.Project.Items.Style customStyle;
+        Animation customFontSizeAnim, customOffsetX, customOffsetY, customRotationAngle, customLetterSpacing;
 
         switch (unit)
         {
             case TimerPlusUnitKind.Day:
                 useCustom = parameter.DayCustomStyleEnabled;
-                font = useCustom ? parameter.DayFont : parameter.Font;
-                fontSizeAnim = useCustom ? parameter.DayFontSize : null!;
-                fontColor = useCustom ? parameter.DayFontColor : parameter.FontColor;
-                bold = useCustom ? parameter.DayBold : parameter.Bold;
-                italic = useCustom ? parameter.DayItalic : parameter.Italic;
-                underline = useCustom ? parameter.DayUnderline : parameter.Underline;
-                strike = useCustom ? parameter.DayStrikeThrough : parameter.StrikeThrough;
-                style = useCustom ? parameter.DayStyle : parameter.Style;
-                styleColor = useCustom ? parameter.DayStyleColor : parameter.StyleColor;
+                customFont = parameter.DayFont; customFontColor = parameter.DayFontColor;
+                customBold = parameter.DayBold; customItalic = parameter.DayItalic;
+                customUnderline = parameter.DayUnderline; customStrike = parameter.DayStrikeThrough;
+                customStyle = parameter.DayStyle; customStyleColor = parameter.DayStyleColor;
+                customFontSizeAnim = parameter.DayFontSize; customOffsetX = parameter.DayOffsetX;
+                customOffsetY = parameter.DayOffsetY; customRotationAngle = parameter.DayRotationAngle;
+                customLetterSpacing = parameter.DayLetterSpacing;
                 break;
             case TimerPlusUnitKind.Hour:
                 useCustom = parameter.HourCustomStyleEnabled;
-                font = useCustom ? parameter.HourFont : parameter.Font;
-                fontSizeAnim = useCustom ? parameter.HourFontSize : null!;
-                fontColor = useCustom ? parameter.HourFontColor : parameter.FontColor;
-                bold = useCustom ? parameter.HourBold : parameter.Bold;
-                italic = useCustom ? parameter.HourItalic : parameter.Italic;
-                underline = useCustom ? parameter.HourUnderline : parameter.Underline;
-                strike = useCustom ? parameter.HourStrikeThrough : parameter.StrikeThrough;
-                style = useCustom ? parameter.HourStyle : parameter.Style;
-                styleColor = useCustom ? parameter.HourStyleColor : parameter.StyleColor;
+                customFont = parameter.HourFont; customFontColor = parameter.HourFontColor;
+                customBold = parameter.HourBold; customItalic = parameter.HourItalic;
+                customUnderline = parameter.HourUnderline; customStrike = parameter.HourStrikeThrough;
+                customStyle = parameter.HourStyle; customStyleColor = parameter.HourStyleColor;
+                customFontSizeAnim = parameter.HourFontSize; customOffsetX = parameter.HourOffsetX;
+                customOffsetY = parameter.HourOffsetY; customRotationAngle = parameter.HourRotationAngle;
+                customLetterSpacing = parameter.HourLetterSpacing;
                 break;
             case TimerPlusUnitKind.Minute:
                 useCustom = parameter.MinuteCustomStyleEnabled;
-                font = useCustom ? parameter.MinuteFont : parameter.Font;
-                fontSizeAnim = useCustom ? parameter.MinuteFontSize : null!;
-                fontColor = useCustom ? parameter.MinuteFontColor : parameter.FontColor;
-                bold = useCustom ? parameter.MinuteBold : parameter.Bold;
-                italic = useCustom ? parameter.MinuteItalic : parameter.Italic;
-                underline = useCustom ? parameter.MinuteUnderline : parameter.Underline;
-                strike = useCustom ? parameter.MinuteStrikeThrough : parameter.StrikeThrough;
-                style = useCustom ? parameter.MinuteStyle : parameter.Style;
-                styleColor = useCustom ? parameter.MinuteStyleColor : parameter.StyleColor;
+                customFont = parameter.MinuteFont; customFontColor = parameter.MinuteFontColor;
+                customBold = parameter.MinuteBold; customItalic = parameter.MinuteItalic;
+                customUnderline = parameter.MinuteUnderline; customStrike = parameter.MinuteStrikeThrough;
+                customStyle = parameter.MinuteStyle; customStyleColor = parameter.MinuteStyleColor;
+                customFontSizeAnim = parameter.MinuteFontSize; customOffsetX = parameter.MinuteOffsetX;
+                customOffsetY = parameter.MinuteOffsetY; customRotationAngle = parameter.MinuteRotationAngle;
+                customLetterSpacing = parameter.MinuteLetterSpacing;
                 break;
             case TimerPlusUnitKind.Second:
                 useCustom = parameter.SecondCustomStyleEnabled;
-                font = useCustom ? parameter.SecondFont : parameter.Font;
-                fontSizeAnim = useCustom ? parameter.SecondFontSize : null!;
-                fontColor = useCustom ? parameter.SecondFontColor : parameter.FontColor;
-                bold = useCustom ? parameter.SecondBold : parameter.Bold;
-                italic = useCustom ? parameter.SecondItalic : parameter.Italic;
-                underline = useCustom ? parameter.SecondUnderline : parameter.Underline;
-                strike = useCustom ? parameter.SecondStrikeThrough : parameter.StrikeThrough;
-                style = useCustom ? parameter.SecondStyle : parameter.Style;
-                styleColor = useCustom ? parameter.SecondStyleColor : parameter.StyleColor;
+                customFont = parameter.SecondFont; customFontColor = parameter.SecondFontColor;
+                customBold = parameter.SecondBold; customItalic = parameter.SecondItalic;
+                customUnderline = parameter.SecondUnderline; customStrike = parameter.SecondStrikeThrough;
+                customStyle = parameter.SecondStyle; customStyleColor = parameter.SecondStyleColor;
+                customFontSizeAnim = parameter.SecondFontSize; customOffsetX = parameter.SecondOffsetX;
+                customOffsetY = parameter.SecondOffsetY; customRotationAngle = parameter.SecondRotationAngle;
+                customLetterSpacing = parameter.SecondLetterSpacing;
                 break;
             case TimerPlusUnitKind.Fraction:
                 useCustom = parameter.FractionCustomStyleEnabled;
-                font = useCustom ? parameter.FractionFont : parameter.Font;
-                fontSizeAnim = useCustom ? parameter.FractionFontSize : null!;
-                fontColor = useCustom ? parameter.FractionFontColor : parameter.FontColor;
-                bold = useCustom ? parameter.FractionBold : parameter.Bold;
-                italic = useCustom ? parameter.FractionItalic : parameter.Italic;
-                underline = useCustom ? parameter.FractionUnderline : parameter.Underline;
-                strike = useCustom ? parameter.FractionStrikeThrough : parameter.StrikeThrough;
-                style = useCustom ? parameter.FractionStyle : parameter.Style;
-                styleColor = useCustom ? parameter.FractionStyleColor : parameter.StyleColor;
+                customFont = parameter.FractionFont; customFontColor = parameter.FractionFontColor;
+                customBold = parameter.FractionBold; customItalic = parameter.FractionItalic;
+                customUnderline = parameter.FractionUnderline; customStrike = parameter.FractionStrikeThrough;
+                customStyle = parameter.FractionStyle; customStyleColor = parameter.FractionStyleColor;
+                customFontSizeAnim = parameter.FractionFontSize; customOffsetX = parameter.FractionOffsetX;
+                customOffsetY = parameter.FractionOffsetY; customRotationAngle = parameter.FractionRotationAngle;
+                customLetterSpacing = parameter.FractionLetterSpacing;
                 break;
             default:
                 return null;
         }
 
-        double scale = useCustom ? fontSizeAnim.GetValue(frame, lengthFrames, fps) / 100.0 : 1.0;
+        groupFont = parameter.Font;
+        string font = useCustom ? customFont : groupFont;
+        WpfColor fontColor = useCustom ? customFontColor : parameter.FontColor;
+        bool bold = useCustom ? customBold : parameter.Bold;
+        bool italic = useCustom ? customItalic : parameter.Italic;
+        bool underline = useCustom ? customUnderline : parameter.Underline;
+        bool strike = useCustom ? customStrike : parameter.StrikeThrough;
+        YukkuriMovieMaker.Project.Items.Style style = useCustom ? customStyle : parameter.Style;
+        WpfColor styleColor = useCustom ? customStyleColor : parameter.StyleColor;
+
+        // FontSizeはpx単位の絶対値なので、文字グループのpxとの比率をScaleとして渡す。
+        double scale = 1.0;
+        double? characterSpacing = null;
+        if (useCustom)
+        {
+            double groupPx = parameter.FontSize.GetValue(frame, lengthFrames, fps);
+            double unitPx = customFontSizeAnim.GetValue(frame, lengthFrames, fps);
+            scale = groupPx > 0 ? unitPx / groupPx : 1.0;
+            characterSpacing = customLetterSpacing.GetValue(frame, lengthFrames, fps);
+        }
+
+        // 位置(X/Y)・回転角は「文字揃え計算」の後に適用する見た目上の追加ズレとして扱うため、
+        // 測定パス(applyOffsets=false)では常に0にする。
+        double offsetX = 0, offsetY = 0, rotationAngle = 0;
+        if (useCustom && applyOffsets)
+        {
+            offsetX = customOffsetX.GetValue(frame, lengthFrames, fps);
+            offsetY = customOffsetY.GetValue(frame, lengthFrames, fps);
+            rotationAngle = customRotationAngle.GetValue(frame, lengthFrames, fps);
+        }
 
         return new TextDecoration(
             Start: start,
@@ -348,17 +407,17 @@ internal class TimerPlusShapeSource : IShapeSource
             Font: font,
             Foreground: fontColor,
             IsLineBreak: false,
-            OffsetX: 0,
-            OffsetY: 0,
+            OffsetX: offsetX,
+            OffsetY: offsetY,
             IsAbsoluteX: false,
             IsAbsoluteY: false,
             DecorationColor: styleColor,
-            RotationZ: 0,
+            RotationZ: rotationAngle,
             IsStrikethrough: strike,
             IsUnderline: underline,
             RotationGroupId: 0,
             PositionGroupId: 0,
-            CharacterSpacing: null,
+            CharacterSpacing: characterSpacing,
             StyleType: (int)style);
     }
 

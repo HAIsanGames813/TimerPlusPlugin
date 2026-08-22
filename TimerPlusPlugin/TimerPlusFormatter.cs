@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 
 namespace TimerPlusPlugin;
 
@@ -29,6 +26,7 @@ public sealed record TimerPlusUnitSettings(
     string Prefix,
     string Suffix,
     int Line,
+    bool FixedDigits,
     bool CustomStyleEnabled);
 
 public sealed record TimerPlusCustomSettings(
@@ -122,7 +120,16 @@ public static class TimerPlusFormatter
         long minuteValue = ApplyCarry(wholeSeconds, SecPerMinute, ancestorsForMinute);
         long secondValue = ApplyCarry(wholeSeconds, SecPerSecond, ancestorsForSecond);
 
-        string FormatNumber(long val, int digits) => val.ToString("D" + Math.Max(1, digits), CultureInfo.InvariantCulture);
+        string FormatNumber(long val, int digits, bool fixedDigits)
+        {
+            if (fixedDigits && digits > 0)
+            {
+                long modulus = (long)Math.Pow(10, digits);
+                val %= modulus;
+                if (val < 0) val += modulus;
+            }
+            return val.ToString("D" + Math.Max(1, digits), CultureInfo.InvariantCulture);
+        }
 
         var items = new List<(int line, TimerPlusUnitKind kind, string text)>();
 
@@ -130,23 +137,23 @@ public static class TimerPlusFormatter
 
         if (s.Day.Enabled)
             items.Add((Math.Max(1, s.Day.Line), TimerPlusUnitKind.Day,
-                s.Day.Prefix + FormatNumber(dayValue, s.Day.Digits) + s.Day.Suffix));
+                s.Day.Prefix + FormatNumber(dayValue, s.Day.Digits, s.Day.FixedDigits) + s.Day.Suffix));
 
         if (s.Hour.Enabled)
             items.Add((Math.Max(1, s.Hour.Line), TimerPlusUnitKind.Hour,
-                s.Hour.Prefix + FormatNumber(hourValue, s.Hour.Digits) + s.Hour.Suffix));
+                s.Hour.Prefix + FormatNumber(hourValue, s.Hour.Digits, s.Hour.FixedDigits) + s.Hour.Suffix));
 
         if (s.Minute.Enabled)
             items.Add((Math.Max(1, s.Minute.Line), TimerPlusUnitKind.Minute,
-                s.Minute.Prefix + FormatNumber(minuteValue, s.Minute.Digits) + s.Minute.Suffix));
+                s.Minute.Prefix + FormatNumber(minuteValue, s.Minute.Digits, s.Minute.FixedDigits) + s.Minute.Suffix));
 
         if (s.Second.Enabled)
             items.Add((Math.Max(1, s.Second.Line), TimerPlusUnitKind.Second,
-                s.Second.Prefix + FormatNumber(secondValue, s.Second.Digits) + s.Second.Suffix));
+                s.Second.Prefix + FormatNumber(secondValue, s.Second.Digits, s.Second.FixedDigits) + s.Second.Suffix));
 
         if (s.Fraction.Enabled)
             items.Add((Math.Max(1, s.Fraction.Line), TimerPlusUnitKind.Fraction,
-                s.Fraction.Prefix + FormatNumber(fracValue, s.Fraction.Digits) + s.Fraction.Suffix));
+                s.Fraction.Prefix + FormatNumber(fracValue, s.Fraction.Digits, s.Fraction.FixedDigits) + s.Fraction.Suffix));
 
         // 行番号でグルーピング(同じ行内は処理順を維持)
         var byLine = items

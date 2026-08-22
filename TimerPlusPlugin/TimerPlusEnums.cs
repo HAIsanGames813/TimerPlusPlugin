@@ -31,7 +31,7 @@ public enum TimerPlusFormat
     [Display(GroupName = "書式", Name = "00:00:01.00", Description = "00:00:01.00")]
     HHMMSSFF,
 
-    [Display(GroupName = "書式", Name = "カスタム", Description = "日/時/分/秒/小数秒それぞれの設定で自由に組み立てます")]
+    [Display(GroupName = "書式", Name = "カスタム", Description = "書式や配置をカスタムできます")]
     Custom,
 }
 
