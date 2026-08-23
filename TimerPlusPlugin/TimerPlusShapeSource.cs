@@ -1,6 +1,4 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
@@ -9,7 +7,6 @@ using Vortice.Direct2D1;
 using Vortice.Mathematics;
 using YukkuriMovieMaker.Commons;
 using YukkuriMovieMaker.Player.Video;
-using YukkuriMovieMaker.Plugin.Shape;
 using YukkuriMovieMaker.Project.Items;
 using WpfColor = System.Windows.Media.Color;
 

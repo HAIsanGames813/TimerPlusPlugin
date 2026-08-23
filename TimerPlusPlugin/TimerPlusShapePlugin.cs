@@ -7,7 +7,7 @@ namespace TimerPlusPlugin;
 [PluginDetails(AuthorName = "ハイさん", ContentId = "")]
 public class TimerPlusShapePlugin : IShapePlugin, IPlugin
 {
-    public string Name => "タイマー+";
+    public string Name => "タイマー＋";
 
     public bool IsExoShapeSupported => false;
 
