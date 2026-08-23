@@ -61,7 +61,7 @@ internal class TimerPlusShapeSource : IShapeSource
         TimeSpan duration = desc.ItemDuration.Time;
 
         TimeSpan counterTime = ComputeCounterTime(frame, length, fps, duration);
-        var lines = TimerPlusFormatter.FormatLines(counterTime, parameter.Format, parameter.CreateCustomSettings());
+        var lines = TimerPlusFormatter.FormatLines(counterTime, parameter.Format, parameter.CreateCustomSettings(), fps);
 
         // 行ごとに、「揃え計算用(オフセットなし)」と「実描画用(オフセットあり)」の2種類のDecorationsを構築
         var lineData = new List<(string text, ImmutableList<TextDecoration> measureDecorations, ImmutableList<TextDecoration> renderDecorations)>();

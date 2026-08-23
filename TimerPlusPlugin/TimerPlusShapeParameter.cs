@@ -14,11 +14,11 @@ public class TimerPlusShapeParameter : ShapeParameterBase
 {
     public TimerPlusShapeParameter(SharedDataStore? sharedData) : base(sharedData)
     {
-        dayDetailView = new DayDetailView(this);
-        hourDetailView = new HourDetailView(this);
-        minuteDetailView = new MinuteDetailView(this);
-        secondDetailView = new SecondDetailView(this);
-        fractionDetailView = new FractionDetailView(this);
+        dayUnitView = new DayUnitView(this);
+        hourUnitView = new HourUnitView(this);
+        minuteUnitView = new MinuteUnitView(this);
+        secondUnitView = new SecondUnitView(this);
+        fractionUnitView = new FractionUnitView(this);
     }
 
     [Obsolete]
@@ -49,21 +49,23 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public Animation InitialValueOffset { get; } = new Animation(0.0, -2147483648.0, 2147483647.0);
 
     [Display(GroupName = "", Name = "速度", Description = "タイマーの再生速度を変更できます", AutoGenerateField = true)]
-    [AnimationSlider("F0", "%", -1000, 1000)]
+    [AnimationSlider("F1", "%", -100, 100)]
     public Animation PlaybackRate { get; } = new Animation(100.0, -100000.0, 100000.0);
 
     [Display(GroupName = "", Name = "初期値反転", Description = "初期値を終了値として扱うようにします")]
     [ToggleSlider]
     public bool IsInitialValueReversed { get => field; set => Set(ref field, value); } = false;
 
-    [Display(GroupName = "日", Name = "使用する", Description = "この単位の表示を有効にします")]
-    [ToggleSlider]
-    public bool DayEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Day)]); } = false;
+    public bool DayEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) dayUnitView.RaiseDetailChanged(); }
+    } = false;
 
-    [Display(GroupName = "日", Name = "設定", Description = "", AutoGenerateField = true)]
-    public DayDetailView? Day => (Format == TimerPlusFormat.Custom && DayEnabled) ? dayDetailView : null;
+    [Display(GroupName = "", Name = "日", Description = "書式が「カスタム」のときのみ表示されます", AutoGenerateField = true)]
+    public DayUnitView? Day => Format == TimerPlusFormat.Custom ? dayUnitView : null;
 
-    // 以下は実データ。UI表示は dayDetailView / dayFontView (プロキシ) 側の同名プロパティで行うため、
+    // 以下は実データ。UI表示は dayUnitView 配下のプロキシ側の同名プロパティで行うため、
     // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string DayPrefix { get => field; set => Set(ref field, value); } = "";
     public string DaySuffix { get => field; set => Set(ref field, value); } = ":";
@@ -75,7 +77,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public bool DayCustomStyleEnabled
     {
         get => field;
-        set { if (Set(ref field, value)) dayDetailView.RaiseFontEditorChanged(); }
+        set { if (Set(ref field, value)) dayUnitView.DetailViewInternal.RaiseFontEditorChanged(); }
     } = false;
 
     public string DayFont { get => field; set => Set(ref field, value); } = "メイリオ";
@@ -92,16 +94,18 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public Animation DayRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Animation DayLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    private readonly DayDetailView dayDetailView;
+    private readonly DayUnitView dayUnitView;
 
-    [Display(GroupName = "時", Name = "使用する", Description = "この単位の表示を有効にします")]
-    [ToggleSlider]
-    public bool HourEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Hour)]); } = false;
+    public bool HourEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) hourUnitView.RaiseDetailChanged(); }
+    } = false;
 
-    [Display(GroupName = "時", Name = "設定", Description = "", AutoGenerateField = true)]
-    public HourDetailView? Hour => (Format == TimerPlusFormat.Custom && HourEnabled) ? hourDetailView : null;
+    [Display(GroupName = "", Name = "時", Description = "書式が「カスタム」のときのみ表示されます", AutoGenerateField = true)]
+    public HourUnitView? Hour => Format == TimerPlusFormat.Custom ? hourUnitView : null;
 
-    // 以下は実データ。UI表示は hourDetailView / hourFontView (プロキシ) 側の同名プロパティで行うため、
+    // 以下は実データ。UI表示は hourUnitView 配下のプロキシ側の同名プロパティで行うため、
     // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string HourPrefix { get => field; set => Set(ref field, value); } = "";
     public string HourSuffix { get => field; set => Set(ref field, value); } = ":";
@@ -113,7 +117,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public bool HourCustomStyleEnabled
     {
         get => field;
-        set { if (Set(ref field, value)) hourDetailView.RaiseFontEditorChanged(); }
+        set { if (Set(ref field, value)) hourUnitView.DetailViewInternal.RaiseFontEditorChanged(); }
     } = false;
 
     public string HourFont { get => field; set => Set(ref field, value); } = "メイリオ";
@@ -130,16 +134,18 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public Animation HourRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Animation HourLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    private readonly HourDetailView hourDetailView;
+    private readonly HourUnitView hourUnitView;
 
-    [Display(GroupName = "分", Name = "使用する", Description = "この単位の表示を有効にします")]
-    [ToggleSlider]
-    public bool MinuteEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Minute)]); } = true;
+    public bool MinuteEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) minuteUnitView.RaiseDetailChanged(); }
+    } = true;
 
-    [Display(GroupName = "分", Name = "設定", Description = "", AutoGenerateField = true)]
-    public MinuteDetailView? Minute => (Format == TimerPlusFormat.Custom && MinuteEnabled) ? minuteDetailView : null;
+    [Display(GroupName = "", Name = "分", Description = "書式が「カスタム」のときのみ表示されます", AutoGenerateField = true)]
+    public MinuteUnitView? Minute => Format == TimerPlusFormat.Custom ? minuteUnitView : null;
 
-    // 以下は実データ。UI表示は minuteDetailView / minuteFontView (プロキシ) 側の同名プロパティで行うため、
+    // 以下は実データ。UI表示は minuteUnitView 配下のプロキシ側の同名プロパティで行うため、
     // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string MinutePrefix { get => field; set => Set(ref field, value); } = "";
     public string MinuteSuffix { get => field; set => Set(ref field, value); } = ":";
@@ -151,7 +157,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public bool MinuteCustomStyleEnabled
     {
         get => field;
-        set { if (Set(ref field, value)) minuteDetailView.RaiseFontEditorChanged(); }
+        set { if (Set(ref field, value)) minuteUnitView.DetailViewInternal.RaiseFontEditorChanged(); }
     } = false;
 
     public string MinuteFont { get => field; set => Set(ref field, value); } = "メイリオ";
@@ -168,16 +174,18 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public Animation MinuteRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Animation MinuteLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    private readonly MinuteDetailView minuteDetailView;
+    private readonly MinuteUnitView minuteUnitView;
 
-    [Display(GroupName = "秒", Name = "使用する", Description = "この単位の表示を有効にします")]
-    [ToggleSlider]
-    public bool SecondEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Second)]); } = true;
+    public bool SecondEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) secondUnitView.RaiseDetailChanged(); }
+    } = true;
 
-    [Display(GroupName = "秒", Name = "設定", Description = "", AutoGenerateField = true)]
-    public SecondDetailView? Second => (Format == TimerPlusFormat.Custom && SecondEnabled) ? secondDetailView : null;
+    [Display(GroupName = "", Name = "秒", Description = "書式が「カスタム」のときのみ表示されます", AutoGenerateField = true)]
+    public SecondUnitView? Second => Format == TimerPlusFormat.Custom ? secondUnitView : null;
 
-    // 以下は実データ。UI表示は secondDetailView / secondFontView (プロキシ) 側の同名プロパティで行うため、
+    // 以下は実データ。UI表示は secondUnitView 配下のプロキシ側の同名プロパティで行うため、
     // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
     public string SecondPrefix { get => field; set => Set(ref field, value); } = "";
     public string SecondSuffix { get => field; set => Set(ref field, value); } = ".";
@@ -189,7 +197,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public bool SecondCustomStyleEnabled
     {
         get => field;
-        set { if (Set(ref field, value)) secondDetailView.RaiseFontEditorChanged(); }
+        set { if (Set(ref field, value)) secondUnitView.DetailViewInternal.RaiseFontEditorChanged(); }
     } = false;
 
     public string SecondFont { get => field; set => Set(ref field, value); } = "メイリオ";
@@ -206,17 +214,20 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public Animation SecondRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Animation SecondLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    private readonly SecondDetailView secondDetailView;
+    private readonly SecondUnitView secondUnitView;
 
-    [Display(GroupName = "小数秒", Name = "使用する", Description = "この単位の表示を有効にします")]
-    [ToggleSlider]
-    public bool FractionEnabled { get => field; set => Set(ref field, value, etcChangedPropertyNames: [nameof(Fraction)]); } = true;
+    public bool FractionEnabled
+    {
+        get => field;
+        set { if (Set(ref field, value)) fractionUnitView.RaiseDetailChanged(); }
+    } = true;
 
-    [Display(GroupName = "小数秒", Name = "設定", Description = "", AutoGenerateField = true)]
-    public FractionDetailView? Fraction => (Format == TimerPlusFormat.Custom && FractionEnabled) ? fractionDetailView : null;
+    [Display(GroupName = "", Name = "小数秒", Description = "書式が「カスタム」のときのみ表示されます", AutoGenerateField = true)]
+    public FractionUnitView? Fraction => Format == TimerPlusFormat.Custom ? fractionUnitView : null;
 
-    // 以下は実データ。UI表示は fractionDetailView / fractionFontView (プロキシ) 側の同名プロパティで行うため、
+    // 以下は実データ。UI表示は fractionUnitView 配下のプロキシ側の同名プロパティで行うため、
     // ここには表示用属性を付けない(付けると書式より上に常時表示の二重項目ができてしまう)。
+    public TimerPlusFractionType FractionType { get => field; set => Set(ref field, value); } = TimerPlusFractionType.Decimal;
     public string FractionPrefix { get => field; set => Set(ref field, value); } = "";
     public string FractionSuffix { get => field; set => Set(ref field, value); } = "";
     public int FractionDigits { get => field; set => Set(ref field, value); } = 2;
@@ -227,7 +238,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public bool FractionCustomStyleEnabled
     {
         get => field;
-        set { if (Set(ref field, value)) fractionDetailView.RaiseFontEditorChanged(); }
+        set { if (Set(ref field, value)) fractionUnitView.DetailViewInternal.RaiseFontEditorChanged(); }
     } = false;
 
     public string FractionFont { get => field; set => Set(ref field, value); } = "メイリオ";
@@ -244,7 +255,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
     public Animation FractionRotationAngle { get; } = new Animation(0.0, -100000.0, 100000.0);
     public Animation FractionLetterSpacing { get; } = new Animation(0.0, -100000.0, 100000.0);
 
-    private readonly FractionDetailView fractionDetailView;
+    private readonly FractionUnitView fractionUnitView;
 
     [Display(GroupName = "テキスト", Name = "フォント")]
     [FontComboBox]
@@ -315,7 +326,8 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         new TimerPlusUnitSettings(HourEnabled, HourDigits, HourPrefix, HourSuffix, HourLine, HourFixedDigits, HourCustomStyleEnabled),
         new TimerPlusUnitSettings(MinuteEnabled, MinuteDigits, MinutePrefix, MinuteSuffix, MinuteLine, MinuteFixedDigits, MinuteCustomStyleEnabled),
         new TimerPlusUnitSettings(SecondEnabled, SecondDigits, SecondPrefix, SecondSuffix, SecondLine, SecondFixedDigits, SecondCustomStyleEnabled),
-        new TimerPlusUnitSettings(FractionEnabled, FractionDigits, FractionPrefix, FractionSuffix, FractionLine, FractionFixedDigits, FractionCustomStyleEnabled));
+        new TimerPlusUnitSettings(FractionEnabled, FractionDigits, FractionPrefix, FractionSuffix, FractionLine, FractionFixedDigits, FractionCustomStyleEnabled),
+        FractionType);
 
     protected override void LoadSharedData(SharedDataStore sharedData)
     {
@@ -436,6 +448,7 @@ public class TimerPlusShapeParameter : ShapeParameterBase
         SecondLetterSpacing.CopyFrom(data.SecondLetterSpacing);
 
         FractionEnabled = data.FractionEnabled;
+        FractionType = data.FractionType;
         FractionPrefix = data.FractionPrefix;
         FractionSuffix = data.FractionSuffix;
         FractionDigits = data.FractionDigits;

@@ -101,6 +101,7 @@ public class TimerPlusShapeParameterData
     public Color SecondStyleColor { get; set; }
 
     public bool FractionEnabled { get; set; }
+    public TimerPlusFractionType FractionType { get; set; }
     public int FractionDigits { get; set; }
     public string FractionPrefix { get; set; } = "";
     public string FractionSuffix { get; set; } = "";
@@ -244,6 +245,7 @@ public class TimerPlusShapeParameterData
         SecondStyleColor = parameter.SecondStyleColor;
 
         FractionEnabled = parameter.FractionEnabled;
+        FractionType = parameter.FractionType;
         FractionDigits = parameter.FractionDigits;
         FractionPrefix = parameter.FractionPrefix;
         FractionSuffix = parameter.FractionSuffix;

@@ -34,7 +34,8 @@ public sealed record TimerPlusCustomSettings(
     TimerPlusUnitSettings Hour,
     TimerPlusUnitSettings Minute,
     TimerPlusUnitSettings Second,
-    TimerPlusUnitSettings Fraction);
+    TimerPlusUnitSettings Fraction,
+    TimerPlusFractionType FractionType);
 
 public static class TimerPlusFormatter
 {
@@ -44,7 +45,7 @@ public static class TimerPlusFormatter
     private const long SecPerSecond = 1;
 
     /// <summary>カウンター時間を行・テキスト片リストに変換する。「カスタム」以外は1行1セグメント。</summary>
-    public static IReadOnlyList<TimerPlusTextLine> FormatLines(TimeSpan counterTime, TimerPlusFormat format, TimerPlusCustomSettings custom)
+    public static IReadOnlyList<TimerPlusTextLine> FormatLines(TimeSpan counterTime, TimerPlusFormat format, TimerPlusCustomSettings custom, int fps)
     {
         bool negative = counterTime.Ticks < 0;
         var t = counterTime.Duration();
@@ -52,7 +53,7 @@ public static class TimerPlusFormatter
 
         if (format == TimerPlusFormat.Custom)
         {
-            var lines = FormatCustomLines(t, custom);
+            var lines = FormatCustomLines(t, custom, fps);
             return PrependSign(lines, sign);
         }
 
@@ -91,29 +92,57 @@ public static class TimerPlusFormatter
     }
 
     /// <summary>カスタム書式。各単位は常に独立したセグメントとして生成し、行番号でグルーピングする。</summary>
-    private static IReadOnlyList<TimerPlusTextLine> FormatCustomLines(TimeSpan t, TimerPlusCustomSettings s)
+    private static IReadOnlyList<TimerPlusTextLine> FormatCustomLines(TimeSpan t, TimerPlusCustomSettings s, int fps)
     {
         double totalSecondsAbs = t.TotalSeconds;
 
         long wholeSeconds = (long)Math.Floor(totalSecondsAbs);
         double fracPart = totalSecondsAbs - wholeSeconds;
 
-        int fracDigits = Math.Max(0, s.Fraction.Digits);
-        int fracValue = 0;
-        if (s.Fraction.Enabled && fracDigits > 0)
-        {
-            double scale = Math.Pow(10, fracDigits);
-            fracValue = (int)Math.Round(fracPart * scale, MidpointRounding.AwayFromZero);
-            if (fracValue >= scale)
-            {
-                fracValue = 0;
-                wholeSeconds += 1;
-            }
-        }
-
         var ancestorsForHour = new (long size, bool enabled)[] { (SecPerDay, s.Day.Enabled) };
         var ancestorsForMinute = new (long size, bool enabled)[] { (SecPerHour, s.Hour.Enabled), (SecPerDay, s.Day.Enabled) };
         var ancestorsForSecond = new (long size, bool enabled)[] { (SecPerMinute, s.Minute.Enabled), (SecPerHour, s.Hour.Enabled), (SecPerDay, s.Day.Enabled) };
+
+        int fracValue = 0;
+        if (s.Fraction.Enabled)
+        {
+            if (s.FractionType == TimerPlusFractionType.Frame && fps > 0)
+            {
+                // 1秒間の中の経過フレーム数(速度倍率はcounterTime側で既に反映済みなので、ここでは単純にfpsを分母にする)。
+                long frameWithinSecond = (long)Math.Round(fracPart * fps, MidpointRounding.AwayFromZero);
+                if (frameWithinSecond >= fps)
+                {
+                    frameWithinSecond = 0;
+                    wholeSeconds += 1;
+                }
+
+                if (s.Second.Enabled)
+                {
+                    // 「秒」が表示されているので、フレームは秒/分/時と同様に1秒ごとにリセットする。
+                    fracValue = (int)frameWithinSecond;
+                }
+                else
+                {
+                    // 「秒」が表示されていないので、秒と同様に次の有効な祖先(分/時/日)がロールオーバーするまでリセットしない。
+                    long secondsWithinPeriod = ApplyCarry(wholeSeconds, SecPerSecond, ancestorsForSecond);
+                    fracValue = (int)(secondsWithinPeriod * fps + frameWithinSecond);
+                }
+            }
+            else
+            {
+                int fracDigits = Math.Max(0, s.Fraction.Digits);
+                if (fracDigits > 0)
+                {
+                    double scale = Math.Pow(10, fracDigits);
+                    fracValue = (int)Math.Round(fracPart * scale, MidpointRounding.AwayFromZero);
+                    if (fracValue >= scale)
+                    {
+                        fracValue = 0;
+                        wholeSeconds += 1;
+                    }
+                }
+            }
+        }
 
         long dayValue = wholeSeconds / SecPerDay;
         long hourValue = ApplyCarry(wholeSeconds, SecPerHour, ancestorsForHour);

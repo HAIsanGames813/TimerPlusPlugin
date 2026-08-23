@@ -43,3 +43,12 @@ public enum TimerPlusCountDirection
     [Display(GroupName = "モード", Name = "カウントダウン", Description = "初期値まで減少していきます")]
     CountDown,
 }
+
+public enum TimerPlusFractionType
+{
+    [Display(GroupName = "表示タイプ", Name = "小数", Description = "1秒未満の端数を小数として表示します")]
+    Decimal,
+
+    [Display(GroupName = "表示タイプ", Name = "フレーム", Description = "1フレームごとに1ずつ加算して表示します(速度倍率も反映されます)")]
+    Frame,
+}

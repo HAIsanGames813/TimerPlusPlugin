@@ -6,6 +6,32 @@ using YukkuriMovieMaker.Controls;
 
 namespace TimerPlusPlugin;
 
+/// <summary>Day単位全体(「使用する」トグル含む)を書式=カスタムのときだけ表示するための外側プロキシ。</summary>
+public sealed class DayUnitView : INotifyPropertyChanged
+{
+    private readonly TimerPlusShapeParameter parent;
+    private readonly DayDetailView detailView;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    internal DayUnitView(TimerPlusShapeParameter parent)
+    {
+        this.parent = parent;
+        detailView = new DayDetailView(parent);
+    }
+
+    internal DayDetailView DetailViewInternal => detailView;
+
+    internal void RaiseDetailChanged() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Detail)));
+
+    [Display(GroupName = "使用", Name = "日", Description = "この単位の表示を有効にします")]
+    [ToggleSlider]
+    public bool Enabled { get => parent.DayEnabled; set => parent.DayEnabled = value; }
+
+    [Display(GroupName = "日", Name = "設定", Description = "「使用する」がONのときのみ表示されます", AutoGenerateField = true)]
+    public DayDetailView? Detail => Enabled ? detailView : null;
+}
+
 /// <summary>Dayの「設定」表示グループ用の薄いプロキシ。実データはすべて親のTimerPlusShapeParameterのプロパティ(Set()経由)を直接読み書きする。</summary>
 public sealed class DayDetailView : INotifyPropertyChanged
 {
@@ -119,6 +145,32 @@ public sealed class DayFontView
 
 }
 
+/// <summary>Hour単位全体(「使用する」トグル含む)を書式=カスタムのときだけ表示するための外側プロキシ。</summary>
+public sealed class HourUnitView : INotifyPropertyChanged
+{
+    private readonly TimerPlusShapeParameter parent;
+    private readonly HourDetailView detailView;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    internal HourUnitView(TimerPlusShapeParameter parent)
+    {
+        this.parent = parent;
+        detailView = new HourDetailView(parent);
+    }
+
+    internal HourDetailView DetailViewInternal => detailView;
+
+    internal void RaiseDetailChanged() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Detail)));
+
+    [Display(GroupName = "使用", Name = "時", Description = "この単位の表示を有効にします")]
+    [ToggleSlider]
+    public bool Enabled { get => parent.HourEnabled; set => parent.HourEnabled = value; }
+
+    [Display(GroupName = "時", Name = "設定", Description = "「使用する」がONのときのみ表示されます", AutoGenerateField = true)]
+    public HourDetailView? Detail => Enabled ? detailView : null;
+}
+
 /// <summary>Hourの「設定」表示グループ用の薄いプロキシ。実データはすべて親のTimerPlusShapeParameterのプロパティ(Set()経由)を直接読み書きする。</summary>
 public sealed class HourDetailView : INotifyPropertyChanged
 {
@@ -228,6 +280,32 @@ public sealed class HourFontView
     [Display(GroupName = "テキスト", Name = "装飾色")]
     [ColorPicker]
     public Color StyleColor { get => parent.HourStyleColor; set => parent.HourStyleColor = value; }
+}
+
+/// <summary>Minute単位全体(「使用する」トグル含む)を書式=カスタムのときだけ表示するための外側プロキシ。</summary>
+public sealed class MinuteUnitView : INotifyPropertyChanged
+{
+    private readonly TimerPlusShapeParameter parent;
+    private readonly MinuteDetailView detailView;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    internal MinuteUnitView(TimerPlusShapeParameter parent)
+    {
+        this.parent = parent;
+        detailView = new MinuteDetailView(parent);
+    }
+
+    internal MinuteDetailView DetailViewInternal => detailView;
+
+    internal void RaiseDetailChanged() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Detail)));
+
+    [Display(GroupName = "使用", Name = "分", Description = "この単位の表示を有効にします")]
+    [ToggleSlider]
+    public bool Enabled { get => parent.MinuteEnabled; set => parent.MinuteEnabled = value; }
+
+    [Display(GroupName = "分", Name = "設定", Description = "「使用する」がONのときのみ表示されます", AutoGenerateField = true)]
+    public MinuteDetailView? Detail => Enabled ? detailView : null;
 }
 
 /// <summary>Minuteの「設定」表示グループ用の薄いプロキシ。実データはすべて親のTimerPlusShapeParameterのプロパティ(Set()経由)を直接読み書きする。</summary>
@@ -343,6 +421,32 @@ public sealed class MinuteFontView
     public Color StyleColor { get => parent.MinuteStyleColor; set => parent.MinuteStyleColor = value; }
 }
 
+/// <summary>Second単位全体(「使用する」トグル含む)を書式=カスタムのときだけ表示するための外側プロキシ。</summary>
+public sealed class SecondUnitView : INotifyPropertyChanged
+{
+    private readonly TimerPlusShapeParameter parent;
+    private readonly SecondDetailView detailView;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    internal SecondUnitView(TimerPlusShapeParameter parent)
+    {
+        this.parent = parent;
+        detailView = new SecondDetailView(parent);
+    }
+
+    internal SecondDetailView DetailViewInternal => detailView;
+
+    internal void RaiseDetailChanged() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Detail)));
+
+    [Display(GroupName = "使用", Name = "秒", Description = "この単位の表示を有効にします")]
+    [ToggleSlider]
+    public bool Enabled { get => parent.SecondEnabled; set => parent.SecondEnabled = value; }
+
+    [Display(GroupName = "秒", Name = "設定", Description = "「使用する」がONのときのみ表示されます", AutoGenerateField = true)]
+    public SecondDetailView? Detail => Enabled ? detailView : null;
+}
+
 /// <summary>Secondの「設定」表示グループ用の薄いプロキシ。実データはすべて親のTimerPlusShapeParameterのプロパティ(Set()経由)を直接読み書きする。</summary>
 public sealed class SecondDetailView : INotifyPropertyChanged
 {
@@ -456,6 +560,32 @@ public sealed class SecondFontView
     public Color StyleColor { get => parent.SecondStyleColor; set => parent.SecondStyleColor = value; }
 }
 
+/// <summary>Fraction単位全体(「使用する」トグル含む)を書式=カスタムのときだけ表示するための外側プロキシ。</summary>
+public sealed class FractionUnitView : INotifyPropertyChanged
+{
+    private readonly TimerPlusShapeParameter parent;
+    private readonly FractionDetailView detailView;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    internal FractionUnitView(TimerPlusShapeParameter parent)
+    {
+        this.parent = parent;
+        detailView = new FractionDetailView(parent);
+    }
+
+    internal FractionDetailView DetailViewInternal => detailView;
+
+    internal void RaiseDetailChanged() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Detail)));
+
+    [Display(GroupName = "使用", Name = "小数秒", Description = "この単位の表示を有効にします")]
+    [ToggleSlider]
+    public bool Enabled { get => parent.FractionEnabled; set => parent.FractionEnabled = value; }
+
+    [Display(GroupName = "小数秒", Name = "設定", Description = "「使用する」がONのときのみ表示されます", AutoGenerateField = true)]
+    public FractionDetailView? Detail => Enabled ? detailView : null;
+}
+
 /// <summary>Fractionの「設定」表示グループ用の薄いプロキシ。実データはすべて親のTimerPlusShapeParameterのプロパティ(Set()経由)を直接読み書きする。</summary>
 public sealed class FractionDetailView : INotifyPropertyChanged
 {
@@ -471,6 +601,10 @@ public sealed class FractionDetailView : INotifyPropertyChanged
     }
 
     internal void RaiseFontEditorChanged() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FontEditor)));
+
+    [Display(GroupName = "表示", Name = "表示タイプ", Description = "小数とフレームの切り替え")]
+    [EnumComboBox]
+    public TimerPlusFractionType Type { get => parent.FractionType; set => parent.FractionType = value; }
 
     [Display(GroupName = "表示", Name = "前文字", Description = "数値の前に表示する文字列")]
     [TextEditor]
