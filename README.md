@@ -1,7 +1,7 @@
 <img width="1920" height="1080" alt="タイマープラス" src="https://github.com/user-attachments/assets/c03e5539-8075-461e-a174-9ab84a41220e" />
 
 # タイマー＋(タイマープラス)　v1.0.0
-## 制作者:HAIsan
+## 制作者：HAIsan
 
 ## 概要
 図形の種類「タイマー＋」を追加するプラグインです  
